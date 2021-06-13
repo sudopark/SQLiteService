@@ -45,6 +45,11 @@ public enum QueryStatement {
                 return self
             }
         }
+        
+        var isEmpty: Bool {
+            guard case .empty = self else { return false }
+            return true
+        }
     }
 }
 

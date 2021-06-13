@@ -8,9 +8,9 @@
 import Foundation
 
 
-private extension StorageDataType {
+extension StorageDataType {
     
-    func convert() -> String {
+    func toString() -> String {
         switch self {
         case let string as String:
             let replaceSingleQuote = string.replacingOccurrences(of: "'", with: "''")
@@ -26,12 +26,12 @@ private extension StorageDataType {
 }
 
 
-private extension Optional where Wrapped == StorageDataType {
+extension Optional where Wrapped == StorageDataType {
     
     func asStatementText() -> String {
         switch self {
         case .none: return "NULL"
-        case let .some(value): return value.convert()
+        case let .some(value): return value.toString()
         }
     }
 }
@@ -55,16 +55,16 @@ extension QueryStatement.Condition {
             
         case .in:
             guard let array = self.value as? [StorageDataType] else {
-                throw SQliteErrors.invalidArgument("not a array")
+                throw SQLiteErrors.invalidArgument("not a array")
             }
-            let arrayText = array.map{ $0.convert() }.joined(separator: ", ")
+            let arrayText = array.map{ $0.toString() }.joined(separator: ", ")
             return "\(self.key) IN (\(arrayText))"
             
         case .notIn:
             guard let array = self.value as? [StorageDataType] else {
-                throw SQliteErrors.invalidArgument("not a array")
+                throw SQLiteErrors.invalidArgument("not a array")
             }
-            let arrayText = array.map{ $0.convert() }.joined(separator: ", ")
+            let arrayText = array.map{ $0.toString() }.joined(separator: ", ")
             return "\(self.key) NOT IN (\(arrayText))"
         }
     }
@@ -95,7 +95,7 @@ extension QueryStatement.ConditionSet {
 }
 
 
-extension SelectQuery.SelectionType {
+extension Query.Selection {
     
     private var singleSelectColumn: String {
         switch self {
@@ -128,10 +128,23 @@ extension SelectQuery.SelectionType {
     }
 }
 
-extension SelectQuery {
+extension Query {
     
     func asStatement() throws -> String {
-        var sender = self.selection.asStatementText()
+        switch self.queryType {
+        case let .select(selection):
+            return try self.asSelectionQueryStatement(selection)
+             
+        case let .update(table, set):
+            return try self.asUpdateStatement(for: table, set: set)
+            
+        case let .delete(table):
+            return try self.asDeleteStatement(for: table)
+        }
+    }
+    
+    private func asSelectionQueryStatement(_ selection: Query.Selection) throws -> String {
+        var sender = selection.asStatementText()
         let condition = try self.conditions.asStatementText()
         if condition.isEmpty == false {
             sender = "\(sender) WHERE \(condition)"
@@ -148,6 +161,29 @@ extension SelectQuery {
         
         if let limit = self.limit {
             sender = "\(sender) LIMIT \(limit)"
+        }
+        return "\(sender);"
+    }
+    
+    private func asUpdateStatement(for table: String,
+                                   set: [ReplaceSet]) throws -> String {
+        let prefix = "UPDATE \(table) "
+        let setString = set
+            .map{ "\($0.column) = \($0.value.asStatementText())" }
+            .joined(separator: ", ")
+        var sender = "\(prefix) SET \(setString)"
+        if self.conditions.isEmpty == false {
+            let conditionString = try self.conditions.asStatementText()
+            sender = "\(sender) WHERE \(conditionString)"
+        }
+        return "\(sender);"
+    }
+    
+    private func asDeleteStatement(for table: String) throws -> String {
+        var sender = "DELETE FROM \(table)"
+        if self.conditions.isEmpty == false {
+            let conditionString = try self.conditions.asStatementText()
+            sender = "\(sender) WHERE \(conditionString)"
         }
         return "\(sender);"
     }
