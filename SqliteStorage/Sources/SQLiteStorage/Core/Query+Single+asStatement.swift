@@ -8,6 +8,8 @@
 import Foundation
 
 
+// MARK: - convert to string
+
 extension StorageDataType {
     
     func toString() -> String {
@@ -36,36 +38,40 @@ extension Optional where Wrapped == StorageDataType {
     }
 }
 
-
 extension QueryExpression.Condition {
+    
+    private var column: String {
+        guard let table = self.table else { return self.key }
+        return "\(table).\(self.key)"
+    }
     
     func asStatementText() throws -> String {
         switch self.operation {
         case .equal:
-            return "\(self.key) = \(self.value.asStatementText())"
+            return "\(self.column) = \(self.value.asStatementText())"
             
         case .notEqual:
-            return "\(self.key) != \(self.value.asStatementText())"
+            return "\(self.column) != \(self.value.asStatementText())"
             
         case let .greaterThan(orEqual):
-            return "\(self.key) \(orEqual ? ">=" : ">") \(self.value.asStatementText())"
+            return "\(self.column) \(orEqual ? ">=" : ">") \(self.value.asStatementText())"
             
         case let .lessThan(orEqual):
-            return "\(self.key) \(orEqual ? "<=" : "<") \(self.value.asStatementText())"
+            return "\(self.column) \(orEqual ? "<=" : "<") \(self.value.asStatementText())"
             
         case .in:
             guard let array = self.value as? [StorageDataType] else {
                 throw SQLiteErrors.invalidArgument("not a array")
             }
             let arrayText = array.map{ $0.toString() }.joined(separator: ", ")
-            return "\(self.key) IN (\(arrayText))"
+            return "\(self.column) IN (\(arrayText))"
             
         case .notIn:
             guard let array = self.value as? [StorageDataType] else {
                 throw SQLiteErrors.invalidArgument("not a array")
             }
             let arrayText = array.map{ $0.toString() }.joined(separator: ", ")
-            return "\(self.key) NOT IN (\(arrayText))"
+            return "\(self.column) NOT IN (\(arrayText))"
         }
     }
 }

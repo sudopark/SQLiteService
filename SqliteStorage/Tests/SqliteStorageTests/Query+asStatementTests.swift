@@ -112,6 +112,27 @@ extension QueryTests {
 }
 
 
+// MARK: - test join query
+
+extension QueryTests {
+    
+    func testQuery_makeInnerJoinQueryStatement_byCombineSingleQueries() {
+        // given
+        let (left, right) = (DummyTable(), Table2())
+        
+        let leftQry = left.selectAll().where{ $0.k1 == 1 }.limit(10)
+        let rightQry = right.selectSome{ [$0.c1, $0.c2] }.where{ $0.c2 > 10 }
+        
+        // when
+        let joinQuery = leftQry.innerJoin(with: rightQry) { ($0.k1, $1.c2) }
+        let stmt = try? joinQuery.asStatement()
+        
+        // then
+        XCTAssertEqual(stmt, "SELECT Dummy.*, T2.c1, T2.c2 FROM Dummy INNER JOIN T2 ON Dummy.k1 = T2.c2 WHERE Dummy.k1 = 1 AND T2.c2 > 10 LIMIT 10;")
+    }
+}
+
+
 extension QueryTests {
     
     struct DummyModel {
@@ -150,6 +171,27 @@ extension QueryTests {
             let int: Int = try cursor[0].unwrap()
             let str: String = try cursor[1].unwrap()
             return .init(k1: int, k2: str)
+        }
+    }
+    
+    struct Table2: Table {
+        
+        static var tableName: String { "T2" }
+        
+        enum Column: String, TableColumn {
+            case c1
+            case c2
+            
+            var dataType: ColumnDataType { .integer([]) }
+        }
+        
+        typealias ColumnType = Column
+        typealias Model = DummyModel
+        
+        func serialize(model: QueryTests.DummyModel) throws -> [StorageDataType?] { [] }
+        
+        func deserialize(cursor: OpaquePointer?) throws -> QueryTests.DummyModel {
+            return .init(k1: 0, k2: "")
         }
     }
 }

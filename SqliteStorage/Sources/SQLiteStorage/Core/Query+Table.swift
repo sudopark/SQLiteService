@@ -118,7 +118,7 @@ public func || (_ conditions1: QueryExpression.ConditionSet,
 
 public struct SingleQuery<T: Table>: Query {
     
-    fileprivate var query: QueryBuilder = QueryBuilder(table: T.tableName)
+    var query: QueryBuilder = QueryBuilder(table: T.tableName)
 }
 
 extension SingleQuery {
@@ -155,7 +155,7 @@ extension SingleQuery {
     }
     
     @discardableResult
-    public func orderBy(_ column: (T.ColumnType.Type) -> T.ColumnType, isAscending: Bool) -> Self {
+    public func orderBy(isAscending: Bool = false, _ column: (T.ColumnType.Type) -> T.ColumnType) -> Self {
         var sender = self
         sender.query = self.query.orderBy(column(T.ColumnType.self).rawValue, isAscending: isAscending)
         return sender
