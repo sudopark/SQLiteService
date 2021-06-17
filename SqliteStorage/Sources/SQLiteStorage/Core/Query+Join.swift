@@ -44,8 +44,8 @@ public struct JoinQuery<T: Table> {
     var selections: [JoinExpression.Selection]
     var joinOns: [JoinExpression.On]
     var conditionSet: QueryExpression.ConditionSet = .empty
-    var ascendings: Set<JoinExpression.ColumnInTable> = []
-    var descendings: Set<JoinExpression.ColumnInTable> = []
+    var ascendings: [JoinExpression.ColumnInTable] = []
+    var descendings: [JoinExpression.ColumnInTable] = []
     var limit: Int?
     
     static var empty: JoinQuery<T> {
@@ -95,16 +95,16 @@ extension SingleQuery {
         let joinOn: JoinExpression.On = .init(method: method, table: R.tableName,
                                               match: (left: match.0.rawValue, right: match.1.rawValue))
         
-        let leftConditionSet = self.query.conditions.prefix(with: T.tableName)
-        let rightConditionSet = other.query.conditions.prefix(with: R.tableName)
+        let leftConditionSet = self.query.conditions.start(with: T.tableName)
+        let rightConditionSet = other.query.conditions.start(with: R.tableName)
         let conditionSet = intersectCondition
             ? leftConditionSet.and(rightConditionSet)
             : leftConditionSet.or(rightConditionSet)
         
-        let ascendings = self.query.ascendings.asJoinOrderSet(T.tableName)
-            .union(other.query.ascendings.asJoinOrderSet(R.tableName))
-        let descendings = self.query.descendings.asJoinOrderSet(T.tableName)
-            .union(other.query.descendings.asJoinOrderSet(R.tableName))
+        let ascendings = self.query.ascendings.asJoinOrder(T.tableName)
+            + other.query.ascendings.asJoinOrder(R.tableName)
+        let descendings = self.query.descendings.asJoinOrder(T.tableName)
+            + other.query.descendings.asJoinOrder(R.tableName)
         
         let limit = [self.query.limit, other.query.limit].compactMap{ $0 }.min()
         
@@ -153,13 +153,13 @@ extension JoinQuery {
         let newJoinOn: JoinExpression.On = .init(method: method, table: R.tableName,
                                                  match: (left: match.0.rawValue, right: match.1.rawValue))
         
-        let rightConditionSet = other.query.conditions.prefix(with: R.tableName)
+        let rightConditionSet = other.query.conditions.start(with: R.tableName)
         let conditionSet = intersectCondition
             ? self.conditionSet.and(rightConditionSet)
             : self.conditionSet.or(rightConditionSet)
         
-        let ascendings = self.ascendings.union(other.query.ascendings.asJoinOrderSet(R.tableName))
-        let descendings = self.descendings.union(other.query.descendings.asJoinOrderSet(R.tableName))
+        let ascendings = self.ascendings + other.query.ascendings.asJoinOrder(R.tableName)
+        let descendings = self.descendings + other.query.descendings.asJoinOrder(R.tableName)
         
         let limit = [self.limit, other.query.limit].compactMap{ $0 }.min()
         
@@ -191,33 +191,32 @@ private extension QueryExpression.Method.Selection {
 
 private extension QueryExpression.Condition {
     
-    func prefix(with table: TableName) -> Self {
+    func start(with table: TableName) -> Self {
         return .init(table: table, key: self.key, operation: self.operation, value: self.value)
     }
 }
 
 private extension QueryExpression.ConditionSet {
     
-    func prefix(with table: TableName) -> Self {
+    func start(with table: TableName) -> Self {
         switch self {
         case .empty: return self
         case let .single(condition):
-            return .single(condition.prefix(with: table))
+            return .single(condition.start(with: table))
             
         case let .and(left, right, capsuled):
-            return .and(left.prefix(with: table), right.prefix(with: table), capsuled: capsuled)
+            return .and(left.start(with: table), right.start(with: table), capsuled: capsuled)
             
         case let .or(left, right, capsuled):
-            return .or(left.prefix(with: table), right.prefix(with: table), capsuled: capsuled)
+            return .or(left.start(with: table), right.start(with: table), capsuled: capsuled)
         }
     }
 }
 
 
-private extension Set where Element == String {
+private extension Array where Element == String {
     
-    func asJoinOrderSet(_ table: TableName) -> Set<JoinExpression.ColumnInTable> {
-        let sender = self.map{ column -> JoinExpression.ColumnInTable in .init(table: table, column: column) }
-        return Set<JoinExpression.ColumnInTable>(sender)
+    func asJoinOrder(_ table: TableName) -> [JoinExpression.ColumnInTable] {
+        return self.map{ column -> JoinExpression.ColumnInTable in .init(table: table, column: column) }
     }
 }

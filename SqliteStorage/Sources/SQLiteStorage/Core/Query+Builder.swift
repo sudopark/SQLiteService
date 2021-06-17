@@ -15,8 +15,8 @@ public struct QueryBuilder {
     let tableName: TableName
     var method: QueryExpression.Method?
     var conditions: QueryExpression.ConditionSet = .empty
-    var ascendings: Set<ColumnName> = []
-    var descendings: Set<ColumnName> = []
+    var ascendings: [ColumnName] = []
+    var descendings: [ColumnName] = []
     var limit: Int?
     
     init(table: TableName) {
@@ -129,9 +129,9 @@ extension QueryBuilder {
     func orderBy(_ column: String, isAscending: Bool) -> Self {
         var sender = self
         if isAscending {
-            sender.ascendings.insert(column)
+            sender.ascendings.append(column)
         } else {
-            sender.descendings.insert(column)
+            sender.descendings.append(column)
         }
         return sender
     }
