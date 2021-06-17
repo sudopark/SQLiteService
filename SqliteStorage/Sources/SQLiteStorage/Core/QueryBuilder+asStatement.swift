@@ -37,7 +37,7 @@ extension Optional where Wrapped == StorageDataType {
 }
 
 
-extension QueryStatement.Condition {
+extension QueryExpression.Condition {
     
     func asStatementText() throws -> String {
         switch self.operation {
@@ -71,7 +71,7 @@ extension QueryStatement.Condition {
 }
 
 
-extension QueryStatement.ConditionSet {
+extension QueryExpression.ConditionSet {
     
     func asStatementText() throws -> String {
         
@@ -95,56 +95,38 @@ extension QueryStatement.ConditionSet {
 }
 
 
-extension Query.Selection {
+extension QueryExpression.Method.Selection {
     
-    private var singleSelectColumn: String {
+    func asStatementText(for table: String) -> String {
         switch self {
-        case .all: return "*"
-        case let .some(columns, _) where columns.count == 1:
-            return columns[0]
-            
-        default: return ""
-        }
-    }
-    
-    private var table: String {
-        switch self {
-        case let .all(table),
-             let .some(_, table),
-             let .someAt(_, table): return table
-        }
-    }
-    
-    func asStatementText() -> String {
-        switch self {
-        case let .all(table):
+        case .all:
             return "SELECT * FROM \(table)"
-        case let .some(columns, table):
+        case let .some(columns):
             return "SELECT \(columns.joined(separator: ", ")) FROM \(table)"
-        case let .someAt(pairs, table):
-            let text = pairs.map {  "\($0.table).\($0.singleSelectColumn)" }.joined(separator: ", ")
-            return "SELECT \(text) FROM \(table)"
         }
     }
 }
 
-extension Query {
+extension QueryBuilder {
     
     func asStatement() throws -> String {
-        switch self.queryType {
+        switch self.method {
         case let .select(selection):
             return try self.asSelectionQueryStatement(selection)
              
-        case let .update(table, set):
-            return try self.asUpdateStatement(for: table, set: set)
+        case let .update(set):
+            return try self.asUpdateStatement(set)
             
-        case let .delete(table):
-            return try self.asDeleteStatement(for: table)
+        case .delete:
+            return try self.asDeleteStatement()
+            
+        case .none:
+            throw SQLiteErrors.invalidArgument("iligal statement")
         }
     }
     
-    private func asSelectionQueryStatement(_ selection: Query.Selection) throws -> String {
-        var sender = selection.asStatementText()
+    private func asSelectionQueryStatement(_ selection: QueryExpression.Method.Selection) throws -> String {
+        var sender = selection.asStatementText(for: self.tableName)
         let condition = try self.conditions.asStatementText()
         if condition.isEmpty == false {
             sender = "\(sender) WHERE \(condition)"
@@ -165,9 +147,8 @@ extension Query {
         return "\(sender);"
     }
     
-    private func asUpdateStatement(for table: String,
-                                   set: [ReplaceSet]) throws -> String {
-        let prefix = "UPDATE \(table) "
+    private func asUpdateStatement(_ set: [QueryExpression.Method.ReplaceSet]) throws -> String {
+        let prefix = "UPDATE \(self.tableName)"
         let setString = set
             .map{ "\($0.column) = \($0.value.asStatementText())" }
             .joined(separator: ", ")
@@ -179,8 +160,8 @@ extension Query {
         return "\(sender);"
     }
     
-    private func asDeleteStatement(for table: String) throws -> String {
-        var sender = "DELETE FROM \(table)"
+    private func asDeleteStatement() throws -> String {
+        var sender = "DELETE FROM \(self.tableName)"
         if self.conditions.isEmpty == false {
             let conditionString = try self.conditions.asStatementText()
             sender = "\(sender) WHERE \(conditionString)"

@@ -11,7 +11,6 @@ import SQLite3
 
 public protocol Table {
     
-    
     associatedtype Model
     associatedtype ColumnType: TableColumn
     
