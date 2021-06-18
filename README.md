@@ -1,2 +1,3 @@
-# SQLiteStorage
-Simple SqliteStorage for iOS
+# SQLiteDAO
+
+A description of this package.
