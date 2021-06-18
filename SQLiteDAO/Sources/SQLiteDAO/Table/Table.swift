@@ -36,6 +36,16 @@ extension Table {
         return "\(prefix)\(columnStrings)\(suffix)"
     }
     
+    func insertStatement(model: Model, shouldReplace: Bool) throws -> String {
+        let orAnd = shouldReplace ? "REPLACE" : "IGNORE"
+        let prefix = "INSERT OR \(orAnd) INTO \(Self.tableName)"
+        let keyStrings = ColumnType.allCases.map{ $0.rawValue }.joined(separator: ", ")
+        let valueStrings = try self.serialize(model: model)
+            .map{ $0.asStatementText() }
+            .joined(separator: ", ")
+        return "\(prefix) (\(keyStrings)) VALUES (\(valueStrings));"
+    }
+    
     public func migrateStatement(_ currentValue: Int32) -> (newVersion: Int32, statement: String)? {
         return nil
     }

@@ -118,133 +118,84 @@ public func || (_ conditions1: QueryExpression.ConditionSet,
 
 extension Table {
     
-    public func selectAll() -> SingleQuery<Self> {
-        let query = QueryBuilder(table: Self.tableName).select(.all)
-        return SingleQuery(query: query)
+    public func selectAll() -> SelectQuery<Self> {
+        return .init(.all)
     }
     
-    public func selectAll(_ condition: (ColumnType.Type) -> QueryExpression.Condition) -> SingleQuery<Self> {
+    public func selectAll(_ condition: (ColumnType.Type) -> QueryExpression.Condition) -> SelectQuery<Self> {
         return self.selectAll()
-            .where(condition)
+            .where(condition(ColumnType.self))
     }
     
-    public func selectAll(_ conditions: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SingleQuery<Self> {
+    public func selectAll(_ conditions: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SelectQuery<Self> {
         return self.selectAll()
-            .where(conditions)
+            .where(conditions(ColumnType.self))
     }
     
-    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType]) -> SingleQuery<Self> {
-        let query = QueryBuilder(table: Self.tableName)
-            .select(.some(columns(ColumnType.self).map{ $0.rawValue }))
-        return SingleQuery(query: query)
+    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType]) -> SelectQuery<Self> {
+        let columnNames = columns(ColumnType.self).map{ $0.rawValue }
+        return .init(.some(columnNames))
     }
     
     public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
-                           with condition: (ColumnType.Type) -> QueryExpression.Condition) -> SingleQuery<Self> {
+                           with condition: (ColumnType.Type) -> QueryExpression.Condition) -> SelectQuery<Self> {
         return self.selectSome(columns)
-            .where(condition)
+            .where(condition(ColumnType.self))
     }
     
     public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
-                           with conditios: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SingleQuery<Self> {
+                           with conditios: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SelectQuery<Self> {
         return self.selectSome(columns)
-            .where(conditios)
+            .where(conditios(ColumnType.self))
     }
     
-    public func update(replace set: (ColumnType.Type) -> [QueryExpression.Condition]) -> SingleQuery<Self> {
+    public func update(replace set: (ColumnType.Type) -> [QueryExpression.Condition]) -> UpdateQuery<Self> {
         let replaceSets = set(ColumnType.self)
             .filter{ $0.operation.isEqualOperation }
-            .map{ QueryExpression.Method.ReplaceSet($0.key, $0.value) }
-        let query = QueryBuilder(table: Self.tableName)
-            .update(replace: replaceSets)
-        return SingleQuery(query: query)
+            .map{ QueryExpression.ReplaceSet($0.key, $0.value) }
+        return .init(replaceSets)
     }
     
-    public func delete() -> SingleQuery<Self> {
-        let query = QueryBuilder(table: Self.tableName)
-            .delete()
-        return SingleQuery(query: query)
+    public func delete() -> DeleteQuery<Self> {
+        return .init()
     }
 }
 
 
 
-// MARK: - TableQuery
+// MARK: - QueryBuildable + Table
 
-public struct SingleQuery<T: Table>: Query {
+public protocol SingleTableQuery: Query {
     
-    var query: QueryBuilder = QueryBuilder(table: T.tableName)
+    associatedtype T: Table
 }
 
-extension SingleQuery {
+extension SingleTableQuery where Self: QueryBuilable {
     
     @discardableResult
-    public func update(replace set: (T.ColumnType.Type) -> [QueryExpression.Condition]) -> Self {
-        var sender = self
-        let replaceSets = set(T.ColumnType.self)
-            .filter{ $0.operation.isEqualOperation }
-            .map{ QueryExpression.Method.ReplaceSet($0.key, $0.value) }
-        sender.query = query.update(replace: replaceSets)
-        return self
+    public  func `where`(_ conditionSelector: (T.ColumnType.Type) -> QueryExpression.Condition) -> Self {
+        let conditionSet = conditionSelector(T.ColumnType.self).asSingle()
+        return self.where(conditionSet)
     }
     
     @discardableResult
-    public func delete() -> Self {
-        var sender = self
-        sender.query = query.delete()
-        return sender
+    public  func `where`(_ conditionsSelector: (T.ColumnType.Type) -> QueryExpression.ConditionSet) -> Self {
+        let conditionSet = conditionsSelector(T.ColumnType.self)
+        return self.where(conditionSet)
     }
     
     @discardableResult
-    public func `where`(_ condition: (T.ColumnType.Type) -> QueryExpression.Condition) -> Self {
-        var sender = self
-        sender.query = self.query.where(condition(T.ColumnType.self))
-        return sender
-    }
-    
-    @discardableResult
-    public  func `where`(_ conditions: (T.ColumnType.Type) -> QueryExpression.ConditionSet) -> Self {
-        var sender = self
-        sender.query = self.query.where(conditions(T.ColumnType.self))
-        return sender
-    }
-    
-    @discardableResult
-    public func orderBy(isAscending: Bool = false, _ column: (T.ColumnType.Type) -> T.ColumnType) -> Self {
-        var sender = self
-        sender.query = self.query.orderBy(column(T.ColumnType.self).rawValue, isAscending: isAscending)
-        return sender
-    }
-    
-    @discardableResult
-    public func limit(_ count: Int) -> Self {
-        var sender = self
-        sender.query = self.query.limit(count)
-        return sender
+    public func orderBy(isAscending: Bool = false, _ columnSelector: (T.ColumnType.Type) -> T.ColumnType) -> Self {
+        let column = columnSelector(T.ColumnType.self)
+        return self.orderBy(column.rawValue, isAscending: isAscending)
     }
 }
 
 
-// MARK: - get statements
+// MARK: - queries conform TableQueryBuildable
 
-extension SingleQuery {
-    
-    public func asStatement() throws -> String {
-        return try self.query.asStatement()
-    }
-}
+extension SelectQuery: SingleTableQuery { }
 
-extension Table {
-    
-    func insertStatement(model: Model, shouldReplace: Bool) throws -> String {
-        let orAnd = shouldReplace ? "REPLACE" : "IGNORE"
-        let prefix = "INSERT OR \(orAnd) INTO \(Self.tableName)"
-        let keyStrings = ColumnType.allCases.map{ $0.rawValue }.joined(separator: ", ")
-        let valueStrings = try self.serialize(model: model)
-            .map{ $0.asStatementText() }
-            .joined(separator: ", ")
-        return "\(prefix) (\(keyStrings)) VALUES (\(valueStrings));"
-    }
-    
-    
-}
+extension UpdateQuery: SingleTableQuery { }
+
+extension DeleteQuery: SingleTableQuery { }

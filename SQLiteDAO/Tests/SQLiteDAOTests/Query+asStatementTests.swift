@@ -18,40 +18,12 @@ class QueryTests: XCTestCase { }
 
 extension QueryTests {
     
-    func testQuery_convertToStatement_fromBuilder() {
-        // given
-        let builder = QueryBuilder(table: "Some").select(.all)
-        let unit: QueryExpression.Condition = .init(key: "k", operation: .equal, value: "v")
-        
-        // when
-        let query = builder
-            .where(unit)
-            .orderBy("k2", isAscending: false)
-            .limit(100)
-            
-        let stmt = try? query.asStatement()
-        
-        // then
-        XCTAssertEqual(stmt, "SELECT * FROM Some WHERE k = 'v' ORDER BY k2 DESC LIMIT 100;")
-    }
-    
-    func testQuery_convertToStatement_fromBuilderWithSomeColumns() {
-        // given
-        
-        // when
-        let query = QueryBuilder(table: "Some").select(.some(["c1", "c2"]))
-        let stmt = try? query.asStatement()
-        
-        // then
-        XCTAssertEqual(stmt, "SELECT c1, c2 FROM Some;")
-    }
-    
     func testQuery_convertToSelectStatement_fromTable() {
         // given
         let table = DummyTable()
         
         // when
-        let queries: [SingleQuery<DummyTable>] = [
+        let queries: [SelectQuery<DummyTable>] = [
             table.selectAll(),
             table.selectAll()
                 .where { $0.k1 == 1 && $0.k2 > 2 },
@@ -78,7 +50,7 @@ extension QueryTests {
         let table = DummyTable()
         
         // when
-        let queries: [SingleQuery<DummyTable>] = [
+        let queries: [UpdateQuery<DummyTable>] = [
             table.update{ [$0.k1 == 10, $0.k2 > 10, $0.k2 == 100] },
             table.update{ [$0.k2 == 10] }
                 .where{ $0.k2 > 10 }
@@ -97,7 +69,7 @@ extension QueryTests {
         let table = DummyTable()
         
         // when
-        let queries: [SingleQuery<DummyTable>] = [
+        let queries: [DeleteQuery<DummyTable>] = [
             table.delete(),
             table.delete().where{ $0.k2 == 100 }
         ]

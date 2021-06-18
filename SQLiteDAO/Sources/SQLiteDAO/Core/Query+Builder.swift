@@ -1,5 +1,5 @@
 //
-//  Query.swift
+//  QueryBuilder.swift
 //  
 //
 //  Created by sudo.park on 2021/06/14.
@@ -12,83 +12,10 @@ import Foundation
 
 public struct QueryBuilder {
     
-    let tableName: TableName
-    var method: QueryExpression.Method?
     var conditions: QueryExpression.ConditionSet = .empty
     var ascendings: [ColumnName] = []
     var descendings: [ColumnName] = []
     var limit: Int?
-    
-    init(table: TableName) {
-        self.tableName = table
-    }
-}
-
-// MARK: - Extensions
-
-extension QueryExpression.Condition {
-    
-    func asSingle() -> QueryExpression.ConditionSet {
-        return .single(self)
-    }
-    
-    func and(_ other: QueryExpression.Condition) -> QueryExpression.ConditionSet {
-        return .and(.single(self), .single(other), capsuled: false)
-    }
-    
-    func or(_ other: QueryExpression.Condition) -> QueryExpression.ConditionSet {
-        return .or(.single(self), .single(other), capsuled: false)
-    }
-}
-
-extension QueryExpression.ConditionSet {
-    
-    func and(_ otherCondition: QueryExpression.Condition) -> QueryExpression.ConditionSet {
-        return .and(self.capsuled(), .single(otherCondition), capsuled: false)
-    }
-    
-    func and(_ otherConditionSet: QueryExpression.ConditionSet) -> QueryExpression.ConditionSet {
-        return .and(self.capsuled(), otherConditionSet.capsuled(), capsuled: false)
-    }
-    
-    func or(_ otherCondition: QueryExpression.Condition) -> QueryExpression.ConditionSet {
-        return .or(self.capsuled(), .single(otherCondition), capsuled: false)
-    }
-    
-    func or(_ otherConditionSet: QueryExpression.ConditionSet) -> QueryExpression.ConditionSet {
-        return .or(self.capsuled(), otherConditionSet.capsuled(), capsuled: false)
-    }
-}
-
-
-// MARK: - QueryBuilder
-
-extension QueryBuilder {
-    
-    @discardableResult
-    func select(_ selection: QueryExpression.Method.Selection) -> Self {
-        var sender = self
-        sender.method = .select(selection)
-        return sender
-    }
-    
-    @discardableResult
-    func update(replace set: [QueryExpression.Method.ReplaceSet]) -> Self {
-        var sender = self
-        if case let .update(replaceSet) = self.method {
-            sender.method = .update(replaceSet + set)
-        } else {
-            sender.method = .update(set)
-        }
-        return sender
-    }
-    
-    @discardableResult
-    public func delete() -> Self {
-        var sender = self
-        sender.method = .delete
-        return sender
-    }
 }
 
 // MARK: - QueryBuilder + Conditions builder
@@ -96,7 +23,7 @@ extension QueryBuilder {
 extension QueryBuilder {
     
     @discardableResult
-    func `where`(_ condition: QueryExpression.Condition) -> Self {
+    public func `where`(_ condition: QueryExpression.Condition) -> Self {
         var sender = self
         if case .empty = self.conditions {
             sender.conditions = .single(condition)
@@ -107,7 +34,7 @@ extension QueryBuilder {
     }
     
     @discardableResult
-    func `where`(_ conditions: QueryExpression.ConditionSet) -> Self {
+    public func `where`(_ conditions: QueryExpression.ConditionSet) -> Self {
         var sender = self
         if case .empty = self.conditions {
             sender.conditions = conditions
@@ -126,7 +53,7 @@ extension QueryBuilder {
 extension QueryBuilder {
     
     @discardableResult
-    func orderBy(_ column: String, isAscending: Bool) -> Self {
+    public func orderBy(_ column: String, isAscending: Bool) -> Self {
         var sender = self
         if isAscending {
             sender.ascendings.append(column)
@@ -137,9 +64,75 @@ extension QueryBuilder {
     }
     
     @discardableResult
-    func limit(_ count: Int) -> Self {
+    public func limit(_ count: Int) -> Self {
         var sender = self
         sender.limit = count
         return sender
+    }
+}
+
+
+// MARK: - QueryBuilable
+
+public protocol QueryBuilable {
+    
+    var builder: QueryBuilder { get set }
+}
+
+
+extension QueryBuilable where Self: Query {
+    
+    @discardableResult
+    public func `where`(_ conditions: QueryExpression.ConditionSet) -> Self {
+        var sender = self
+        sender.builder = sender.builder.where(conditions)
+        return sender
+    }
+    
+    @discardableResult
+    public func orderBy(_ column: String, isAscending: Bool) -> Self {
+        var sender = self
+        sender.builder = sender.builder.orderBy(column, isAscending: isAscending)
+        return sender
+    }
+    
+    @discardableResult
+    public func limit(_ count: Int) -> Self {
+        var sender = self
+        sender.builder =  sender.builder.limit(count)
+        return sender
+    }
+}
+
+
+// MARK: - QueryBuilder as Statement
+
+extension QueryBuilder {
+    
+    func appendConditionText(_ stmt: String) throws -> String {
+        let condition = try self.conditions.asStatementText()
+        guard condition.isEmpty == false else {
+            return stmt
+        }
+        return "\(stmt) WHERE \(condition)"
+    }
+    
+    func appendOrderText(_ stmt: String) -> String {
+        let ascString = ascendings.map{ "\($0) ASC" }.joined(separator: ", ")
+        let descString = descendings.map{ "\($0) DESC" }.joined(separator: ", ")
+        
+        let orderString = ascString.isEmpty ? descString : descString.isEmpty
+            ? ascString : "\(ascString), \(descString)"
+        guard orderString.isEmpty == false else {
+            return stmt
+        }
+        return "\(stmt) ORDER BY \(orderString)"
+    }
+    
+    func appendLimitText(_ stmt: String) -> String {
+        guard let limit = self.limit else {
+            return stmt
+        }
+        return "\(stmt) LIMIT \(limit)"
     }
 }
