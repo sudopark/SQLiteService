@@ -114,6 +114,61 @@ public func || (_ conditions1: QueryExpression.ConditionSet,
 }
 
 
+// MARK: - Table -> Query
+
+extension Table {
+    
+    public func selectAll() -> SingleQuery<Self> {
+        let query = QueryBuilder(table: Self.tableName).select(.all)
+        return SingleQuery(query: query)
+    }
+    
+    public func selectAll(_ condition: (ColumnType.Type) -> QueryExpression.Condition) -> SingleQuery<Self> {
+        return self.selectAll()
+            .where(condition)
+    }
+    
+    public func selectAll(_ conditions: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SingleQuery<Self> {
+        return self.selectAll()
+            .where(conditions)
+    }
+    
+    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType]) -> SingleQuery<Self> {
+        let query = QueryBuilder(table: Self.tableName)
+            .select(.some(columns(ColumnType.self).map{ $0.rawValue }))
+        return SingleQuery(query: query)
+    }
+    
+    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
+                           with condition: (ColumnType.Type) -> QueryExpression.Condition) -> SingleQuery<Self> {
+        return self.selectSome(columns)
+            .where(condition)
+    }
+    
+    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
+                           with conditios: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SingleQuery<Self> {
+        return self.selectSome(columns)
+            .where(conditios)
+    }
+    
+    public func update(replace set: (ColumnType.Type) -> [QueryExpression.Condition]) -> SingleQuery<Self> {
+        let replaceSets = set(ColumnType.self)
+            .filter{ $0.operation.isEqualOperation }
+            .map{ QueryExpression.Method.ReplaceSet($0.key, $0.value) }
+        let query = QueryBuilder(table: Self.tableName)
+            .update(replace: replaceSets)
+        return SingleQuery(query: query)
+    }
+    
+    public func delete() -> SingleQuery<Self> {
+        let query = QueryBuilder(table: Self.tableName)
+            .delete()
+        return SingleQuery(query: query)
+    }
+}
+
+
+
 // MARK: - TableQuery
 
 public struct SingleQuery<T: Table>: Query {
@@ -166,38 +221,6 @@ extension SingleQuery {
         var sender = self
         sender.query = self.query.limit(count)
         return sender
-    }
-}
-
-
-// MARK: - Table -> Query
-
-extension Table {
-    
-    public func selectAll() -> SingleQuery<Self> {
-        let query = QueryBuilder(table: Self.tableName).select(.all)
-        return SingleQuery(query: query)
-    }
-    
-    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType]) -> SingleQuery<Self> {
-        let query = QueryBuilder(table: Self.tableName)
-            .select(.some(columns(ColumnType.self).map{ $0.rawValue }))
-        return SingleQuery(query: query)
-    }
-    
-    public func update(replace set: (ColumnType.Type) -> [QueryExpression.Condition]) -> SingleQuery<Self> {
-        let replaceSets = set(ColumnType.self)
-            .filter{ $0.operation.isEqualOperation }
-            .map{ QueryExpression.Method.ReplaceSet($0.key, $0.value) }
-        let query = QueryBuilder(table: Self.tableName)
-            .update(replace: replaceSets)
-        return SingleQuery(query: query)
-    }
-    
-    public func delete() -> SingleQuery<Self> {
-        let query = QueryBuilder(table: Self.tableName)
-            .delete()
-        return SingleQuery(query: query)
     }
 }
 
