@@ -9,6 +9,11 @@ import Foundation
 
 
 public enum SQLiteErrors: Error {
-    case invalidArgument(_ reason: String)
-    case step(_ reason: String)
+    case open(_ message: String)
+    case close
+    case invalidArgument(_ message: String)
+    case prepare(_ message: String)
+    case step(_ message: String)
+    case transation(_ message: String)
+    case migration(_ message: String)
 }

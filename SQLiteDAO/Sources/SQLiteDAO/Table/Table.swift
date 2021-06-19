@@ -15,12 +15,12 @@ public protocol Table {
     associatedtype ColumnType: TableColumn
     
     static var tableName: String { get }
-    
+
     func serialize(model: Model) throws -> [StorageDataType?]
     
     func deserialize(cursor: OpaquePointer?) throws -> Model
     
-    func migrateStatement(_ currentValue: Int32) -> (newVersion: Int32, statement: String)?
+    func migrateStatement(for version: Int32) -> String?
     
     var createStatement: String { get }
 }
@@ -28,7 +28,7 @@ public protocol Table {
 
 extension Table {
     
-    public var createStatement: String {
+    var createStatement: String {
         let prefix = "CREATE TABLE IF NOT EXISTS \(Self.tableName) ("
         let columns = ColumnType.allCases.map{ $0 }
         let columnStrings = columns.map{ $0.toString() }.joined(separator: ", ")
@@ -46,7 +46,11 @@ extension Table {
         return "\(prefix) (\(keyStrings)) VALUES (\(valueStrings));"
     }
     
-    public func migrateStatement(_ currentValue: Int32) -> (newVersion: Int32, statement: String)? {
+    var dropStatement: String {
+        return "DROP TABLE IF EXISTS \(Self.tableName)"
+    }
+    
+    public func migrateStatement(for version: Int32) -> String? {
         return nil
     }
 }
