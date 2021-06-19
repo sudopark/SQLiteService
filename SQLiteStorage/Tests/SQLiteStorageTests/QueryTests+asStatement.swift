@@ -7,7 +7,7 @@
 
 import XCTest
 
-@testable import SQLiteDAO
+@testable import SQLiteStorage
 
 
 
