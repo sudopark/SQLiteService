@@ -12,7 +12,7 @@ import RxSwift
 @testable import RxSQLiteStorage
 
 
-class RxSQLiteStorageTests: BaseSQLiteStorageTests {
+class SQLiteStorageTests_Rx: BaseSQLiteStorageTests {
     
     var disposeBag: DisposeBag!
     
@@ -28,7 +28,7 @@ class RxSQLiteStorageTests: BaseSQLiteStorageTests {
 }
 
 
-extension RxSQLiteStorageTests {
+extension SQLiteStorageTests_Rx {
     
     
     func testStorage_open() {
