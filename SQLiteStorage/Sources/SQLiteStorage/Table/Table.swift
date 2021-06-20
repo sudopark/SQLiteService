@@ -9,26 +9,42 @@ import Foundation
 import SQLite3
 
 
+public protocol DataModel {
+    
+    associatedtype Column: TableColumn
+    
+    func value(for column: Column) -> StorageDataType?
+}
+
+
 public protocol Table {
     
     associatedtype Model
     associatedtype ColumnType: TableColumn
     
     static var tableName: String { get }
-
-    func serialize(model: Model) throws -> [StorageDataType?]
+    
+    func serialize(model: Model, for column: ColumnType) -> StorageDataType?
     
     func deserialize(cursor: OpaquePointer?) throws -> Model
     
-    func migrateStatement(for version: Int32) -> String?
-    
     var createStatement: String { get }
+    
+    func migrateStatement(for version: Int32) -> String?
+}
+
+extension Table {
+    
+    public func serialize(model: Model) throws -> [StorageDataType?] {
+        let allColumns = ColumnType.allCases
+        return allColumns.map{ self.serialize(model: model, for: $0) }
+    }
 }
 
 
 extension Table {
     
-    var createStatement: String {
+    public var createStatement: String {
         let prefix = "CREATE TABLE IF NOT EXISTS \(Self.tableName) ("
         let columns = ColumnType.allCases.map{ $0 }
         let columnStrings = columns.map{ $0.toString() }.joined(separator: ", ")
@@ -36,7 +52,7 @@ extension Table {
         return "\(prefix)\(columnStrings)\(suffix)"
     }
     
-    func insertStatement(model: Model, shouldReplace: Bool) throws -> String {
+    public func insertStatement(model: Model, shouldReplace: Bool) throws -> String {
         let orAnd = shouldReplace ? "REPLACE" : "IGNORE"
         let prefix = "INSERT OR \(orAnd) INTO \(Self.tableName)"
         let keyStrings = ColumnType.allCases.map{ $0.rawValue }.joined(separator: ", ")
@@ -46,8 +62,31 @@ extension Table {
         return "\(prefix) (\(keyStrings)) VALUES (\(valueStrings));"
     }
     
-    var dropStatement: String {
+    public var dropStatement: String {
         return "DROP TABLE IF EXISTS \(Self.tableName)"
+    }
+    
+    public func renameStatement(_ oldName: String) -> String {
+        return "ALTER TABLE \(oldName) RENAME TO \(Self.tableName);"
+    }
+    
+    public func addColumnStatement(_ column: ColumnType) -> String {
+        return "ALTER TABLE \(Self.tableName) ADD COLUMN \(column.toString());"
+    }
+    
+    public func modfiyColumns(tempTable: String? = nil,
+                              to newColumns: [String],
+                              from oldColumns: [String]) -> String {
+        
+        let fromColumns = oldColumns.joined(separator: ", ")
+        let toColumns = newColumns.joined(separator: ", ")
+        
+        let tempTable = tempTable ?? "temp_\(Self.tableName)"
+        let copyStmt = "INSERT INTO \(tempTable) (\(toColumns)) select \(fromColumns) from \(Self.tableName);"
+        let dropStmt = self.dropStatement
+        let renameStmt = self.renameStatement(tempTable)
+        
+        return [copyStmt, dropStmt, renameStmt].joined(separator: "\n")
     }
     
     public func migrateStatement(for version: Int32) -> String? {

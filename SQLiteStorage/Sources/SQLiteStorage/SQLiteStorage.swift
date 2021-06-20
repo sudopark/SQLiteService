@@ -7,10 +7,120 @@
 
 import Foundation
 
-//
-//public class SQLiteStorage {
-//
-//    private let connection: Connection
-//    private let serialQueue: DispatchQueue
-//    private let concurrentQueue: DispatchQueue
-//}
+
+
+private extension DispatchQueue {
+    
+    static var defaultSerialAccessQueue: DispatchQueue {
+        return .init(label: "db_access_queue:\(UUID().uuidString)", qos: .utility)
+    }
+}
+
+
+public class SQLiteStorage {
+
+    private let dbConnection: Connection & DataBase
+    private let serialAccessQueue: DispatchQueue
+    
+    private static let queueKey = DispatchSpecificKey<Int>()
+    private lazy var serialQueueContext: Int = unsafeBitCast(self, to: Int.self)
+    
+    public init(dbConnection: Connection & DataBase = SQLiteDBConnection(),
+                accessQueue: DispatchQueue? = nil) {
+        self.dbConnection = dbConnection
+        self.serialAccessQueue = accessQueue ?? .defaultSerialAccessQueue
+        self.serialAccessQueue.setSpecific(key: Self.queueKey, value: serialQueueContext)
+    }
+    
+    public func open(path: String, _ completed: @escaping (Result<Void, Error>) -> Void) {
+        self.serialAccessQueue.async { [weak self] in
+            guard let self = self else { return }
+            do {
+                try self.dbConnection.open(path: path)
+                completed(.success(()))
+            } catch let error {
+                completed(.failure(error))
+            }
+        }
+    }
+    
+    public func close(_ completed: @escaping (Result<Void, Error>) -> Void) {
+        self.serialAccessQueue.async { [weak self] in
+            guard let self = self else { return }
+            do {
+                try self.dbConnection.close()
+                completed(.success(()))
+            } catch let error {
+                completed(.failure(error))
+            }
+        }
+    }
+}
+
+extension SQLiteStorage {
+    
+    @discardableResult
+    public func run<T>(execute: (DataBase) throws -> T) -> Result<T, Error> {
+        
+        func runEexecute() -> Result<T, Error> {
+            do {
+                let result = try execute(self.dbConnection)
+                return .success(result)
+            } catch let error {
+                return .failure(error)
+            }
+        }
+
+        let isRunningOnSerialAccessQueue = DispatchQueue.getSpecific(key: Self.queueKey) == self.serialQueueContext
+        return isRunningOnSerialAccessQueue ? runEexecute() : self.serialAccessQueue.sync(execute: runEexecute)
+    }
+
+    public func run<T>(execute: @escaping (DataBase) throws -> T,
+                       completed: @escaping (Result<T, Error>) -> Void) {
+        self.serialAccessQueue.async { [weak self] in
+            guard let connection = self?.dbConnection else { return }
+            do {
+                let result = try execute(connection)
+                completed(.success(result))
+            } catch let error {
+                completed(.failure(error))
+            }
+        }
+    }
+}
+
+
+extension SQLiteStorage {
+    
+    public func migrate(upto version: Int32,
+                        steps: @escaping (Int32, DataBase) throws -> Void,
+                        completed: @escaping (Result<Int32, Error>) -> Void) {
+        
+        self.serialAccessQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            do {
+                let currentVersion = try self.dbConnection.userVersion()
+                let newVersion = try self.runMigrationSteps(currentVersion: currentVersion,
+                                                            upto: version, migrationJob: steps)
+                completed(.success(newVersion))
+                
+            } catch let error {
+                completed(.failure(error))
+            }
+        }
+    }
+    
+    private func runMigrationSteps(currentVersion: Int32,
+                                   upto targetVersion: Int32,
+                                   migrationJob: @escaping (Int32, DataBase) throws -> Void) throws -> Int32 {
+        
+        guard currentVersion < targetVersion else { return currentVersion }
+        try migrationJob(currentVersion, self.dbConnection)
+        let nextVersion = currentVersion + 1
+        try self.dbConnection.updateUserVersion(nextVersion)
+        
+        return try runMigrationSteps(currentVersion: nextVersion,
+                                     upto: targetVersion, migrationJob: migrationJob)
+    }
+}

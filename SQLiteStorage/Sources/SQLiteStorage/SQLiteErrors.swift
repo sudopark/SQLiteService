@@ -14,6 +14,7 @@ public enum SQLiteErrors: Error {
     case invalidArgument(_ message: String)
     case prepare(_ message: String)
     case step(_ message: String)
+    case execute(_ message: String)
     case transation(_ message: String)
     case migration(_ message: String)
 }

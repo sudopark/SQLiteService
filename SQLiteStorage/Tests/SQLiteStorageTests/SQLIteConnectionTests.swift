@@ -14,7 +14,7 @@ class SQLIteConnectionTests: XCTestCase {
     
     var dbPath: String!
     var table: Dummies.TypesTable!
-    var connection: SQLiteConnection!
+    var connection: SQLiteDBConnection!
     
     override func setUpWithError() throws {
         
@@ -221,4 +221,3 @@ extension SQLIteConnectionTests {
         XCTAssertNil(models?.first(where: { $0.primaryInt == 5 }))
     }
 }
-

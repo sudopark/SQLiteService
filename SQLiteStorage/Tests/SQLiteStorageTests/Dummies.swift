@@ -44,8 +44,11 @@ extension Dummies {
         typealias Model = Dummies.Model
         typealias ColumnType = Column
         
-        func serialize(model: Model) throws -> [StorageDataType?] {
-            return [model.k1, model.k2]
+        func serialize(model: Dummies.Model, for column: Column) -> StorageDataType? {
+            switch column {
+            case .k1: return model.k1
+            case .k2: return model.k2
+            }
         }
         
         func deserialize(cursor: OpaquePointer?) throws -> Model {
@@ -73,8 +76,11 @@ extension Dummies {
         typealias ColumnType = Column
         typealias Model = Dummies.Model
         
-        func serialize(model: Model) throws -> [StorageDataType?] {
-            return [model.k1, model.k2]
+        func serialize(model: Dummies.Model, for column: Column) -> StorageDataType? {
+            switch column {
+            case .c1: return model.k1
+            case .c2: return model.k2
+            }
         }
         
         func deserialize(cursor: OpaquePointer?) throws -> Model {
@@ -135,16 +141,16 @@ extension Dummies {
         typealias Model = TypesModel
         typealias ColumnType = Column
         
-        func serialize(model: Dummies.TypesModel) throws -> [StorageDataType?] {
-            return [
-                model.primaryInt,
-                model.int,
-                model.real,
-                model.text,
-                model.bool,
-                model.notnull,
-                model.withDefault
-            ]
+        func serialize(model: Dummies.TypesModel, for column: Column) -> StorageDataType? {
+            switch column {
+            case .primaryInt: return model.primaryInt
+            case .int: return model.int
+            case .real: return model.real
+            case .text: return model.text
+            case .bool: return model.bool
+            case .notnull: return model.notnull
+            case .withDefault: return model.withDefault
+            }
         }
         
         func deserialize(cursor: OpaquePointer?) throws -> Dummies.TypesModel {

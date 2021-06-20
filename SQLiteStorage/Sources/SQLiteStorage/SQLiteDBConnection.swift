@@ -9,13 +9,13 @@ import Foundation
 import SQLite3
 
 
-// MARK: - Connection
+// MARK: - DataBase
 
-public protocol Connection {
+public protocol DataBase {
     
-    func open(path: String) throws
+    func userVersion() throws -> Int32
     
-    func close() throws
+    func updateUserVersion(_ newValue: Int32) throws
     
     func createTableOrNot<T: Table>(_ table: T) throws
     
@@ -30,15 +30,43 @@ public protocol Connection {
     func update<T: Table>(_ table: T, query: UpdateQuery<T>) throws
     
     func delete<T: Table>(_ table: T, query: DeleteQuery<T>) throws
+    
+    func executeTransaction(_ statements: String) throws
 }
+
+extension DataBase {
+    
+    public func loadOne<T: Table>(_ table: T, query: SelectQuery<T>) throws -> T.Model? {
+        let query = query.limit(1)
+        return try self.load(table, query: query).first
+    }
+    
+    public func insertOne<T: Table>(_ table: T, model: T.Model, shouldReplace: Bool) throws {
+        try self.insert(table, models: [model], shouldReplace: shouldReplace)
+    }
+}
+
+// MARK: - Connection
+
+public protocol Connection {
+    
+    func open(path: String) throws
+    
+    func close() throws
+}
+
 
 // MARK: - SQLiteConnection
 
-public class SQLiteConnection: Connection {
+public class SQLiteDBConnection: Connection, DataBase {
     
     private var dbPointer: OpaquePointer?
     
-    public init() { } 
+    public init() { }
+    
+    deinit {
+        try? self.close()
+    }
     
     private func errorMessage(_ pointer: OpaquePointer? = nil) -> String {
         let pointer = pointer ?? self.dbPointer
@@ -56,17 +84,13 @@ public class SQLiteConnection: Connection {
         return stmt
     }
     
-    private func executeTransaction<T: Table>(_ table: T,
-                                               innerStatement: String) throws {
-        if innerStatement.isEmpty {
-            return
-        }
-        
-        try createTableOrNot(table)
+    public func executeTransaction(_ statements: String) throws {
+
+        guard statements.isEmpty == false else { return }
         
         let statementString = """
         BEGIN TRANSACTION;
-        \(innerStatement)
+        \(statements)
         COMMIT;
         """
         
@@ -84,7 +108,7 @@ public class SQLiteConnection: Connection {
 }
 
 
-extension SQLiteConnection {
+extension SQLiteDBConnection {
     
     public func open(path: String) throws {
         
@@ -106,7 +130,33 @@ extension SQLiteConnection {
 }
 
 
-extension SQLiteConnection {
+extension SQLiteDBConnection {
+    
+    public func userVersion() throws -> Int32 {
+        let stmtText = "PRAGMA user_version;"
+        var statement: OpaquePointer?
+        defer {
+            sqlite3_finalize(statement)
+        }
+        statement = try prepare(statement: stmtText)
+        var version: Int32 = 0
+        if sqlite3_step(statement) == SQLITE_ROW {
+            version = sqlite3_column_int(statement, 0)
+        }
+        return version
+    }
+    
+    public func updateUserVersion(_ newValue: Int32) throws {
+        let stmtText = "PRAGMA user_version = \(newValue);"
+        let updateResult = sqlite3_exec(dbPointer, stmtText, nil, nil, nil)
+        guard updateResult == SQLITE_OK else {
+            throw SQLiteErrors.execute(errorMessage())
+        }
+    }
+}
+
+
+extension SQLiteDBConnection {
     
     
     public func createTableOrNot<T: Table>(_ table: T) throws {
@@ -147,7 +197,7 @@ extension SQLiteConnection {
 }
 
 
-extension SQLiteConnection {
+extension SQLiteDBConnection {
     
     public func load<T>(_ table: T, query: SelectQuery<T>) throws -> [T.Model] where T : Table {
         
@@ -176,7 +226,7 @@ extension SQLiteConnection {
             .map{ try table.insertStatement(model: $0, shouldReplace: shouldReplace) }
             .joined(separator: "\n")
         
-        try executeTransaction(table, innerStatement: stmt)
+        try executeTransaction(stmt)
     }
     
     public func update<T>(_ table: T, query: UpdateQuery<T>) throws where T : Table {
