@@ -26,7 +26,7 @@ extension SQLiteStorageTests_migration {
     
     private func saveOldUserData(oldTableName: String? = nil,
                                  oldColumns: [UserTable.Column] = UserTable.Column.allCases) -> [User] {
-        let users: [User] = (0..<10).map{ User(userID: $0, name: "name:\($0)", age: $0, nickName: nil)}
+        let users: [User] = self.dummyUsers
         self.waitOpenDatabase()
         
         let tableName = oldTableName ?? UserTable.tableName
@@ -92,7 +92,7 @@ extension SQLiteStorageTests_migration {
     func testStorage_migration_renmaeColumnName() {
         // given
         let expect = expectation(description: "rename table name")
-        let oldUsers: [User] = (0..<10).map{ User(userID: $0, name: "name:\($0)", age: $0, nickName: nil)}
+        let oldUsers = self.dummyUsers
         self.waitOpenDatabase()
     
         let createStmt: String = """

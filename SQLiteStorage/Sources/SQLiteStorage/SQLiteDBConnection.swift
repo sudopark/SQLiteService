@@ -50,6 +50,10 @@ extension DataBase {
     public func insertOne<T: Table>(_ table: T.Type, model: T.Model, shouldReplace: Bool) throws {
         try self.insert(table, models: [model], shouldReplace: shouldReplace)
     }
+    
+    public func insert<T: Table>(_ table: T.Type, models: [T.Model]) throws {
+        return try self.insert(table, models: models, shouldReplace: true)
+    }
 }
 
 // MARK: - Connection

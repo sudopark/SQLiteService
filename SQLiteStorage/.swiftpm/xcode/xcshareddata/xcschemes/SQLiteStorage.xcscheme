@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SQLiteDAO"
-               BuildableName = "SQLiteDAO"
-               BlueprintName = "SQLiteDAO"
+               BlueprintIdentifier = "SQLiteStorage"
+               BuildableName = "SQLiteStorage"
+               BlueprintName = "SQLiteStorage"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,9 +28,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SQLiteDAOTests"
-               BuildableName = "SQLiteDAOTests"
-               BlueprintName = "SQLiteDAOTests"
+               BlueprintIdentifier = "SQLiteStorageTests"
+               BuildableName = "SQLiteStorageTests"
+               BlueprintName = "SQLiteStorageTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,9 +46,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SQLiteDAOTests"
-               BuildableName = "SQLiteDAOTests"
-               BlueprintName = "SQLiteDAOTests"
+               BlueprintIdentifier = "SQLiteStorageTests"
+               BuildableName = "SQLiteStorageTests"
+               BlueprintName = "SQLiteStorageTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>
@@ -74,9 +74,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "SQLiteDAO"
-            BuildableName = "SQLiteDAO"
-            BlueprintName = "SQLiteDAO"
+            BlueprintIdentifier = "SQLiteStorage"
+            BuildableName = "SQLiteStorage"
+            BlueprintName = "SQLiteStorage"
             ReferencedContainer = "container:">
          </BuildableReference>
       </MacroExpansion>

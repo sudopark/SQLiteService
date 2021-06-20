@@ -42,6 +42,10 @@ class BaseSQLiteStorageTests: XCTestCase {
         }
         self.wait(for: [expect], timeout: self.timeout)
     }
+    
+    var dummyUsers: [User] {
+        return (0..<10).map{ User(userID: $0, name: "name:\($0)", age: $0, nickName: nil)}
+    }
 }
 
 

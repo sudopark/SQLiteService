@@ -15,7 +15,7 @@ class SQLiteStorageTests: BaseSQLiteStorageTests { }
 extension SQLiteStorageTests {
     
     private func saveDummyUsers() {
-        let users: [User] = (0..<10).map{ .init(userID: $0, name: "name:\($0)", age: $0, nickName: nil)}
+        let users = self.dummyUsers
         self.storage.run(execute: { try $0.insert(UserTable.self, models: users, shouldReplace: true)})
     }
     
