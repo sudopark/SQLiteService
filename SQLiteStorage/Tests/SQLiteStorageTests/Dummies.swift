@@ -20,6 +20,12 @@ extension Dummies {
         
         let k1: Int
         let k2: String
+        
+        static func deserialize(_ cursor: OpaquePointer) throws -> Dummies.Model {
+            let int: Int = try cursor[0].unwrap()
+            let str: String = try cursor[1].unwrap()
+            return .init(k1: int, k2: str)
+        }
     }
 }
 
@@ -44,20 +50,16 @@ extension Dummies {
         typealias Model = Dummies.Model
         typealias ColumnType = Column
         
-        func serialize(model: Dummies.Model, for column: Column) -> StorageDataType? {
+        static func serialize(model: Dummies.Model, for column: Column) -> ScalarType? {
             switch column {
             case .k1: return model.k1
             case .k2: return model.k2
             }
         }
         
-        func deserialize(cursor: OpaquePointer?) throws -> Model {
-            guard let cursor = cursor else {
-                throw SQLiteErrors.step("deserialize")
-            }
-            let int: Int = try cursor[0].unwrap()
-            let str: String = try cursor[1].unwrap()
-            return .init(k1: int, k2: str)
+        static func deserialize(_ cursor: OpaquePointer) throws -> Dummies.Model {
+            return .init(k1: try cursor[0].unwrap(),
+                         k2: try cursor[1].unwrap())
         }
     }
 
@@ -76,20 +78,17 @@ extension Dummies {
         typealias ColumnType = Column
         typealias Model = Dummies.Model
         
-        func serialize(model: Dummies.Model, for column: Column) -> StorageDataType? {
+        static func serialize(model: Dummies.Model, for column: Column) -> ScalarType? {
             switch column {
             case .c1: return model.k1
             case .c2: return model.k2
             }
         }
         
-        func deserialize(cursor: OpaquePointer?) throws -> Model {
-            guard let cursor = cursor else {
-                throw SQLiteErrors.step("deserialize")
-            }
-            let int: Int = try cursor[0].unwrap()
-            let str: String = try cursor[1].unwrap()
-            return .init(k1: int, k2: str)
+        static func deserialize(_ cursor: OpaquePointer) throws -> Model {
+            
+            return .init(k1: try cursor[0].unwrap(),
+                         k2: try cursor[1].unwrap())
         }
     }
 
@@ -141,7 +140,7 @@ extension Dummies {
         typealias Model = TypesModel
         typealias ColumnType = Column
         
-        func serialize(model: Dummies.TypesModel, for column: Column) -> StorageDataType? {
+        static func serialize(model: Dummies.TypesModel, for column: Column) -> ScalarType? {
             switch column {
             case .primaryInt: return model.primaryInt
             case .int: return model.int
@@ -153,25 +152,15 @@ extension Dummies {
             }
         }
         
-        func deserialize(cursor: OpaquePointer?) throws -> Dummies.TypesModel {
-            guard let cursor = cursor else {
-                throw SQLiteErrors.step("deserialize")
-            }
-            let primary: Int = try cursor[0].unwrap()
-            let int: Int? = cursor[1]
-            let real: Double? = cursor[2]
-            let text: String? = cursor[3]
-            let bool: Bool? = cursor[4]
-            let notNull: Int = try cursor[5].unwrap()
-            let withDefault: String = try cursor[6].unwrap()
+        static func deserialize(_ cursor: OpaquePointer) throws -> Dummies.TypesModel {
             
-            return .init(primaryInt: primary,
-                         int: int,
-                         real: real,
-                         text: text,
-                         bool: bool,
-                         notnull: notNull,
-                         withDefault: withDefault)
+            return .init(primaryInt: try cursor[0].unwrap(),
+                         int: cursor[1],
+                         real: cursor[2],
+                         text: cursor[3],
+                         bool: cursor[4],
+                         notnull: try cursor[5].unwrap(),
+                         withDefault: cursor[6] ?? "default")
         }
     }
 }

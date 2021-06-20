@@ -9,13 +9,7 @@ import Foundation
 import SQLite3
 
 
-public protocol DataModel {
-    
-    associatedtype Column: TableColumn
-    
-    func value(for column: Column) -> StorageDataType?
-}
-
+// MARK: - Table
 
 public protocol Table {
     
@@ -24,27 +18,29 @@ public protocol Table {
     
     static var tableName: String { get }
     
-    func serialize(model: Model, for column: ColumnType) -> StorageDataType?
+    static func serialize(model: Model, for column: ColumnType) -> ScalarType?
     
-    func deserialize(cursor: OpaquePointer?) throws -> Model
+    static func deserialize(_ cursor: OpaquePointer) throws -> Model
     
-    var createStatement: String { get }
+    static var createStatement: String { get }
     
-    func migrateStatement(for version: Int32) -> String?
+    static func migrateStatement(for version: Int32) -> String?
 }
 
 extension Table {
     
-    public func serialize(model: Model) throws -> [StorageDataType?] {
+    public static func serialize(model: Model) throws -> [ScalarType?] {
         let allColumns = ColumnType.allCases
         return allColumns.map{ self.serialize(model: model, for: $0) }
     }
 }
 
 
+// MARK: - Table -> make statements
+
 extension Table {
     
-    public var createStatement: String {
+    public static var createStatement: String {
         let prefix = "CREATE TABLE IF NOT EXISTS \(Self.tableName) ("
         let columns = ColumnType.allCases.map{ $0 }
         let columnStrings = columns.map{ $0.toString() }.joined(separator: ", ")
@@ -52,7 +48,7 @@ extension Table {
         return "\(prefix)\(columnStrings)\(suffix)"
     }
     
-    public func insertStatement(model: Model, shouldReplace: Bool) throws -> String {
+    public static func insertStatement(model: Model, shouldReplace: Bool) throws -> String {
         let orAnd = shouldReplace ? "REPLACE" : "IGNORE"
         let prefix = "INSERT OR \(orAnd) INTO \(Self.tableName)"
         let keyStrings = ColumnType.allCases.map{ $0.rawValue }.joined(separator: ", ")
@@ -62,19 +58,19 @@ extension Table {
         return "\(prefix) (\(keyStrings)) VALUES (\(valueStrings));"
     }
     
-    public var dropStatement: String {
+    public static var dropStatement: String {
         return "DROP TABLE IF EXISTS \(Self.tableName)"
     }
     
-    public func renameStatement(_ oldName: String) -> String {
+    public static func renameStatement(_ oldName: String) -> String {
         return "ALTER TABLE \(oldName) RENAME TO \(Self.tableName);"
     }
     
-    public func addColumnStatement(_ column: ColumnType) -> String {
+    public static func addColumnStatement(_ column: ColumnType) -> String {
         return "ALTER TABLE \(Self.tableName) ADD COLUMN \(column.toString());"
     }
     
-    public func modfiyColumns(tempTable: String? = nil,
+    public static func modfiyColumns(tempTable: String? = nil,
                               to newColumns: [String],
                               from oldColumns: [String]) -> String {
         
@@ -89,15 +85,14 @@ extension Table {
         return [copyStmt, dropStmt, renameStmt].joined(separator: "\n")
     }
     
-    public func migrateStatement(for version: Int32) -> String? {
+    public static func migrateStatement(for version: Int32) -> String? {
         return nil
     }
 }
 
-
 extension OpaquePointer {
     
-    subscript<T>(index: Int) -> T? {
+    public subscript<T>(index: Int) -> T? {
         let index32 = index.asInt32
         let type = sqlite3_column_type(self, index32)
         switch type {
@@ -121,7 +116,7 @@ extension OpaquePointer {
 }
 
 extension Optional {
-    func unwrap() throws -> Wrapped {
+    public func unwrap() throws -> Wrapped {
         switch self {
         case .some(let unwraped): return unwraped
         case .none: throw SQLiteErrors.step("unwrap")

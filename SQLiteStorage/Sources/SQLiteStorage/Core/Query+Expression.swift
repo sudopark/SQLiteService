@@ -26,7 +26,7 @@ extension QueryExpression {
         case some(_ columns: [ColumnName])
     }
     
-    typealias ReplaceSet = (column: ColumnName, value: StorageDataType?)
+    typealias ReplaceSet = (column: ColumnName, value: ScalarType?)
 }
 
 
@@ -53,7 +53,7 @@ extension QueryExpression {
         var table: TableName?
         let key: String
         let operation: Operator
-        let value: StorageDataType?
+        let value: ScalarType?
     }
     
     public indirect enum ConditionSet {
@@ -101,26 +101,52 @@ extension QueryExpression.Condition {
 extension QueryExpression.ConditionSet {
     
     func and(_ otherCondition: QueryExpression.Condition) -> QueryExpression.ConditionSet {
-        return .and(self.capsuled(), .single(otherCondition), capsuled: false)
+        switch self {
+        case .empty: return otherCondition.asSingle()
+        case .single:
+            return .and(self, .single(otherCondition), capsuled: false)
+            
+        default:
+            return .and(self.capsuled(), .single(otherCondition), capsuled: false)
+        }
     }
     
     func and(_ otherConditionSet: QueryExpression.ConditionSet) -> QueryExpression.ConditionSet {
-        return .and(self.capsuled(), otherConditionSet.capsuled(), capsuled: false)
+        switch (self, otherConditionSet) {
+        case (.empty, .empty): return .empty
+        case (.empty, _): return otherConditionSet
+        case (_, .empty): return self
+        default:
+            return .and(self.capsuled(), otherConditionSet.capsuled(), capsuled: false)
+        }
     }
     
     func or(_ otherCondition: QueryExpression.Condition) -> QueryExpression.ConditionSet {
-        return .or(self.capsuled(), .single(otherCondition), capsuled: false)
+        switch self {
+        case .empty: return otherCondition.asSingle()
+        case .single:
+            return .or(self, .single(otherCondition), capsuled: false)
+            
+        default:
+            return .or(self.capsuled(), .single(otherCondition), capsuled: false)
+        }
     }
     
     func or(_ otherConditionSet: QueryExpression.ConditionSet) -> QueryExpression.ConditionSet {
-        return .or(self.capsuled(), otherConditionSet.capsuled(), capsuled: false)
+        switch (self, otherConditionSet) {
+        case (.empty, .empty): return .empty
+        case (.empty, _): return otherConditionSet
+        case (_, .empty): return self
+        default:
+            return .or(self.capsuled(), otherConditionSet.capsuled(), capsuled: false)
+        }
     }
 }
 
 
 // MARK: - QueryExpression as Statement
 
-extension StorageDataType {
+extension ScalarType {
     
     func toString() -> String {
         switch self {
@@ -138,7 +164,7 @@ extension StorageDataType {
 }
 
 
-extension Optional where Wrapped == StorageDataType {
+extension Optional where Wrapped == ScalarType {
     
     func asStatementText() -> String {
         switch self {
@@ -170,14 +196,14 @@ extension QueryExpression.Condition {
             return "\(self.column) \(orEqual ? "<=" : "<") \(self.value.asStatementText())"
             
         case .in:
-            guard let array = self.value as? [StorageDataType] else {
+            guard let array = self.value as? [ScalarType] else {
                 throw SQLiteErrors.invalidArgument("not a array")
             }
             let arrayText = array.map{ $0.toString() }.joined(separator: ", ")
             return "\(self.column) IN (\(arrayText))"
             
         case .notIn:
-            guard let array = self.value as? [StorageDataType] else {
+            guard let array = self.value as? [ScalarType] else {
                 throw SQLiteErrors.invalidArgument("not a array")
             }
             let arrayText = array.map{ $0.toString() }.joined(separator: ", ")

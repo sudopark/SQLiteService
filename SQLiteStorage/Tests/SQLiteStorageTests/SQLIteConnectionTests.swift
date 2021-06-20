@@ -13,13 +13,13 @@ import XCTest
 class SQLIteConnectionTests: XCTestCase {
     
     var dbPath: String!
-    var table: Dummies.TypesTable!
+    var table: Dummies.TypesTable.Type!
     var connection: SQLiteDBConnection!
     
     override func setUpWithError() throws {
         
         let dbName = "Test.db"
-        self.table = .init()
+        self.table = Dummies.TypesTable.self
         let path = try? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
                         .appendingPathComponent(dbName)
                         .path

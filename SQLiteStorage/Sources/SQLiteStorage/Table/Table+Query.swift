@@ -12,35 +12,35 @@ import Foundation
 
 extension TableColumn {
     
-    public func equal<V: StorageDataType & Equatable>(_ value: V?) -> QueryExpression.Condition {
+    public func equal<V: ScalarType & Equatable>(_ value: V?) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .equal, value: value)
     }
     
-    public func notEqual<V: StorageDataType & Equatable>(_ value: V?) -> QueryExpression.Condition {
+    public func notEqual<V: ScalarType & Equatable>(_ value: V?) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .notEqual, value: value)
     }
     
-    public func greateThan<V: StorageDataType & Comparable>(_ value: V) -> QueryExpression.Condition {
+    public func greateThan<V: ScalarType & Comparable>(_ value: V) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .greaterThan(orEqual: false), value: value)
     }
     
-    public func greateThanOrEqual<V: StorageDataType & Comparable>(_ value: V) -> QueryExpression.Condition {
+    public func greateThanOrEqual<V: ScalarType & Comparable>(_ value: V) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .greaterThan(orEqual: true), value: value)
     }
     
-    public func lessThan<V: StorageDataType & Comparable>(_ value: V) -> QueryExpression.Condition {
+    public func lessThan<V: ScalarType & Comparable>(_ value: V) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .lessThan(orEqual: false), value: value)
     }
     
-    public func lessThanOrEqual<V: StorageDataType & Comparable>(_ value: V) -> QueryExpression.Condition {
+    public func lessThanOrEqual<V: ScalarType & Comparable>(_ value: V) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .lessThan(orEqual: true), value: value)
     }
     
-    public func `in`<V: StorageDataType>(_ values: [V]) -> QueryExpression.Condition {
+    public func `in`<V: ScalarType>(_ values: [V]) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .in, value: values)
     }
     
-    public func notIn<V: StorageDataType>(_ values: [V]) -> QueryExpression.Condition {
+    public func notIn<V: ScalarType>(_ values: [V]) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .notIn, value: values)
     }
 }
@@ -48,32 +48,32 @@ extension TableColumn {
 
 // MARK: - TableColumn -> QueryStatement.Condition, ConditionSet operations
 
-public func == <C: TableColumn, V: StorageDataType & Equatable>(_ column: C,
+public func == <C: TableColumn, V: ScalarType & Equatable>(_ column: C,
                                                                 _ value: V) -> QueryExpression.Condition {
     return column.equal(value)
 }
 
-public func != <C: TableColumn, V: StorageDataType & Equatable>(_ column: C,
+public func != <C: TableColumn, V: ScalarType & Equatable>(_ column: C,
                                                                 _ value: V) -> QueryExpression.Condition {
     return column.notEqual(value)
 }
 
-public func > <C: TableColumn, V: StorageDataType & Comparable>(_ column: C,
+public func > <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
                                                                 _ value: V) -> QueryExpression.Condition {
     return column.greateThan(value)
 }
 
-public func >= <C: TableColumn, V: StorageDataType & Comparable>(_ column: C,
+public func >= <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
                                                                  _ value: V) -> QueryExpression.Condition {
     return column.greateThanOrEqual(value)
 }
 
-public func < <C: TableColumn, V: StorageDataType & Comparable>(_ column: C,
+public func < <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
                                                                 _ value: V) -> QueryExpression.Condition {
     return column.lessThan(value)
 }
 
-public func <= <C: TableColumn, V: StorageDataType & Comparable>(_ column: C,
+public func <= <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
                                                                  _ value: V) -> QueryExpression.Condition {
     return column.lessThanOrEqual(value)
 }
@@ -118,45 +118,45 @@ public func || (_ conditions1: QueryExpression.ConditionSet,
 
 extension Table {
     
-    public func selectAll() -> SelectQuery<Self> {
+    public static func selectAll() -> SelectQuery<Self> {
         return .init(.all)
     }
     
-    public func selectAll(_ condition: (ColumnType.Type) -> QueryExpression.Condition) -> SelectQuery<Self> {
+    public static func selectAll(_ condition: (ColumnType.Type) -> QueryExpression.Condition) -> SelectQuery<Self> {
         return self.selectAll()
             .where(condition(ColumnType.self))
     }
     
-    public func selectAll(_ conditions: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SelectQuery<Self> {
+    public static func selectAll(_ conditions: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SelectQuery<Self> {
         return self.selectAll()
             .where(conditions(ColumnType.self))
     }
     
-    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType]) -> SelectQuery<Self> {
+    public static func selectSome(_ columns: (ColumnType.Type) -> [ColumnType]) -> SelectQuery<Self> {
         let columnNames = columns(ColumnType.self).map{ $0.rawValue }
         return .init(.some(columnNames))
     }
     
-    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
+    public static func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
                            with condition: (ColumnType.Type) -> QueryExpression.Condition) -> SelectQuery<Self> {
         return self.selectSome(columns)
             .where(condition(ColumnType.self))
     }
     
-    public func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
+    public static func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
                            with conditios: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SelectQuery<Self> {
         return self.selectSome(columns)
             .where(conditios(ColumnType.self))
     }
     
-    public func update(replace set: (ColumnType.Type) -> [QueryExpression.Condition]) -> UpdateQuery<Self> {
+    public static func update(replace set: (ColumnType.Type) -> [QueryExpression.Condition]) -> UpdateQuery<Self> {
         let replaceSets = set(ColumnType.self)
             .filter{ $0.operation.isEqualOperation }
             .map{ QueryExpression.ReplaceSet($0.key, $0.value) }
         return .init(replaceSets)
     }
     
-    public func delete() -> DeleteQuery<Self> {
+    public static func delete() -> DeleteQuery<Self> {
         return .init()
     }
 }

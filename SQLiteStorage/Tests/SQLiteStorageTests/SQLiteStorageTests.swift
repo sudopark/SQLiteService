@@ -1,0 +1,89 @@
+//
+//  File.swift
+//  
+//
+//  Created by sudo.park on 2021/06/21.
+//
+
+import XCTest
+
+@testable import SQLiteStorage
+
+
+class SQLiteStorageTests: BaseSQLiteStorageTests { }
+
+extension SQLiteStorageTests {
+    
+    private func saveDummyUsers() {
+        let users: [User] = (0..<10).map{ .init(userID: $0, name: "name:\($0)", age: $0, nickName: nil)}
+        self.storage.run(execute: { try $0.insert(UserTable.self, models: users, shouldReplace: true)})
+    }
+    
+    func testStorage_loadScalar() {
+        // given
+        self.waitOpenDatabase()
+        self.saveDummyUsers()
+        
+        // when
+        let users = UserTable.self
+        let query = users.selectSome{ [$0.name] }.where{ $0.userID == 3 }
+        let loadResult: Result<String?, Error> = self.storage.run(execute: { try $0.load(query) })
+        
+        // then
+        let name = loadResult.unwrap()
+        XCTAssertEqual(name, "name:3")
+    }
+    
+    struct UserAge: RowValueType {
+        let userID: Int
+        let age: Int?
+        
+        static func deserialize(_ cursor: OpaquePointer) throws -> SQLiteStorageTests.UserAge {
+            return .init(userID: try cursor[0].unwrap(), age: cursor[1])
+        }
+    }
+    
+    func testStorage_loadRowValue() {
+        // given
+        self.waitOpenDatabase()
+        self.saveDummyUsers()
+        
+        // when
+        let users = UserTable.self
+        let query = users.selectSome{ [$0.userID, $0.age] }
+        let loadResult: Result<[UserAge], Error> = self.storage.run(execute: { try $0.load(query) })
+        
+        // then
+        let ages = loadResult.unwrap()?.map{ $0.age }
+        XCTAssertEqual(ages, Array(0..<10))
+    }
+    
+    struct UserWithK2: RowValueType {
+        let user: User
+        let k2: String
+        
+        static func deserialize(_ cursor: OpaquePointer) throws -> SQLiteStorageTests.UserWithK2 {
+            return .init(user: try UserTable.deserialize(cursor), k2: try cursor[4].unwrap())
+        }
+    }
+    
+    func testStorage_loadUserJoinWithOtherTable() {
+        // given
+        self.waitOpenDatabase()
+        self.saveDummyUsers()
+        let dummies: [Dummies.Model] = (0..<10).map{ .init(k1: $0, k2: "some:\($0)") }
+        self.storage.run(execute: { try $0.insert(Dummies.Table1.self, models: dummies, shouldReplace: true) })
+        
+        // when
+        let users = UserTable.self
+        let userSelect = users.selectAll()
+        let dummySelect = Dummies.Table1.selectSome{ _ in [.k2] }
+        let joinQuery = userSelect.innerJoin(with: dummySelect, on: { ($0.userID, $1.k1) })
+        let loadResult: Result<[UserWithK2], Error> = self.storage.run(execute: { try $0.load(joinQuery) })
+        
+        // then
+        let userK2s = loadResult.unwrap()
+        let k2Values = userK2s?.map{ $0.k2 }
+        XCTAssertEqual(k2Values, dummies.map{ $0.k2 })
+    }
+}

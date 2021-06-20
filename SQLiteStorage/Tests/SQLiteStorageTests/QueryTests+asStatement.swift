@@ -20,7 +20,7 @@ extension QueryTests {
     
     func testQuery_convertToSelectStatement_fromTable() {
         // given
-        let table = Dummies.Table1()
+        let table = Dummies.Table1.self
         
         // when
         let queries: [SelectQuery<Dummies.Table1>] = [
@@ -47,7 +47,7 @@ extension QueryTests {
     
     func testQuery_convertToUpdateStatement_fromTable() {
         // given
-        let table = Dummies.Table1()
+        let table = Dummies.Table1.self
         
         // when
         let queries: [UpdateQuery<Dummies.Table1>] = [
@@ -66,7 +66,7 @@ extension QueryTests {
     
     func testQuery_convertToDeleteStatement_fromTable() {
         // given
-        let table = Dummies.Table1()
+        let table = Dummies.Table1.self
         
         // when
         let queries: [DeleteQuery<Dummies.Table1>] = [
@@ -90,7 +90,7 @@ extension QueryTests {
     
     func testQuery_makeInnerJoinQueryStatement_byCombineSingleQueries() {
         // given
-        let (left, right) = (Dummies.Table1(), Dummies.Table2())
+        let (left, right) = (Dummies.Table1.self, Dummies.Table2.self)
         
         let leftQry = left.selectAll().where{ $0.k1 == 1 }.limit(10)
         let rightQry = right.selectSome{ [$0.c1, $0.c2] }.where{ $0.c2 > 10 }

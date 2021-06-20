@@ -1,5 +1,5 @@
 //
-//  StorageDataType.swift
+//  ScalarType.swift
 //  
 //
 //  Created by sudo.park on 2021/06/13.
@@ -9,18 +9,18 @@ import Foundation
 
 
 
-// MARK: - StorageDataType
+// MARK: - ScalarType
 
-public protocol StorageDataType { }
+public protocol ScalarType { }
 
-extension Bool: StorageDataType {
+extension Bool: ScalarType {
     
     var asInt: Int32 {
         return self ? 1 : 0
     }
 }
 
-extension Int: StorageDataType {
+extension Int: ScalarType {
     
     var asInt64: Int64 {
         return Int64(self)
@@ -31,15 +31,15 @@ extension Int: StorageDataType {
     }
 }
 
-extension Double: StorageDataType { }
+extension Double: ScalarType { }
 
-extension Float: StorageDataType { }
+extension Float: ScalarType { }
 
-extension String: StorageDataType {
+extension String: ScalarType {
     
     var asNSString: NSString {
         return NSString(string: self)
     }
 }
 
-extension Array: StorageDataType where Element: StorageDataType { }
+extension Array: ScalarType where Element: ScalarType { }

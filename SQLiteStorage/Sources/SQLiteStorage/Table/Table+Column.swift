@@ -16,7 +16,7 @@ public enum ColumnDataAttribute {
     case primaryKey(autoIncrement: Bool)
     case notNull
     case unique
-    case `default`(_ value: StorageDataType)
+    case `default`(_ value: ScalarType)
     
     func toString() -> String {
         switch self {

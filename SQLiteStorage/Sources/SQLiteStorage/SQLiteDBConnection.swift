@@ -17,31 +17,37 @@ public protocol DataBase {
     
     func updateUserVersion(_ newValue: Int32) throws
     
-    func createTableOrNot<T: Table>(_ table: T) throws
+    func createTableOrNot<T: Table>(_ table: T.Type) throws
     
-    func dropTable<T: Table>(_ table: T) throws
+    func dropTable<T: Table>(_ table: T.Type) throws
 
-    func migrate<T: Table>(_ table: T, version: Int32) throws
+    func migrate<T: Table>(_ table: T.Type, version: Int32) throws
     
-    func load<T: Table>(_ table: T, query: SelectQuery<T>) throws -> [T.Model]
+    func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model]
     
-    func insert<T: Table>(_ table: T, models: [T.Model], shouldReplace: Bool) throws
+    func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R]
     
-    func update<T: Table>(_ table: T, query: UpdateQuery<T>) throws
+    func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S?
     
-    func delete<T: Table>(_ table: T, query: DeleteQuery<T>) throws
+    func load<T: Table, R: RowValueType>(_ query: JoinQuery<T>) throws -> [R]
+    
+    func insert<T: Table>(_ table: T.Type, models: [T.Model], shouldReplace: Bool) throws
+    
+    func update<T: Table>(_ table: T.Type, query: UpdateQuery<T>) throws
+    
+    func delete<T: Table>(_ table: T.Type, query: DeleteQuery<T>) throws
     
     func executeTransaction(_ statements: String) throws
 }
 
 extension DataBase {
     
-    public func loadOne<T: Table>(_ table: T, query: SelectQuery<T>) throws -> T.Model? {
+    public func loadOne<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> T.Model? {
         let query = query.limit(1)
         return try self.load(table, query: query).first
     }
     
-    public func insertOne<T: Table>(_ table: T, model: T.Model, shouldReplace: Bool) throws {
+    public func insertOne<T: Table>(_ table: T.Type, model: T.Model, shouldReplace: Bool) throws {
         try self.insert(table, models: [model], shouldReplace: shouldReplace)
     }
 }
@@ -159,7 +165,7 @@ extension SQLiteDBConnection {
 extension SQLiteDBConnection {
     
     
-    public func createTableOrNot<T: Table>(_ table: T) throws {
+    public func createTableOrNot<T: Table>(_ table: T.Type) throws {
         
         let createStatement = try prepare(statement: table.createStatement)
         
@@ -172,7 +178,7 @@ extension SQLiteDBConnection {
         }
     }
     
-    public func dropTable<T>(_ table: T) throws where T : Table {
+    public func dropTable<T>(_ table: T.Type) throws where T : Table {
 
         let dropStatement = try prepare(statement: table.dropStatement)
         
@@ -181,7 +187,7 @@ extension SQLiteDBConnection {
         }
     }
     
-    public func migrate<T>(_ table: T, version: Int32) throws where T : Table {
+    public func migrate<T>(_ table: T.Type, version: Int32) throws where T : Table {
         
         guard let migrateStatement = table.migrateStatement(for: version) else { return }
         
@@ -199,24 +205,47 @@ extension SQLiteDBConnection {
 
 extension SQLiteDBConnection {
     
-    public func load<T>(_ table: T, query: SelectQuery<T>) throws -> [T.Model] where T : Table {
+    public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model] {
+        
+        return try iterateDeserialize(query: query, deserialize: T.deserialize(_:))
+    }
+    
+    public func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R] {
+        
+        return try iterateDeserialize(query: query, deserialize: R.deserialize(_:))
+    }
+    
+    public func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S? {
+        
+        return try iterateDeserialize(query: query, deserialize: { $0[0] }).first
+    }
+    
+    public func load<T: Table, R: RowValueType>(_ query: JoinQuery<T>) throws -> [R] {
+        
+        return try iterateDeserialize(query: query, deserialize: R.deserialize(_:))
+    }
+    
+    private func iterateDeserialize<V>(query: Query,
+                                       deserialize: (OpaquePointer) throws -> V?) throws -> [V] {
         
         let stmt = try prepare(statement: query.asStatement())
         
-        var models: [T.Model] = []
+        var values: [V] = []
         var result = sqlite3_step(stmt)
         while result == SQLITE_ROW {
-            if let model = try? table.deserialize(cursor: stmt) {
-                models.append(model)
+            if let cursor = stmt, let value = try? deserialize(cursor) {
+                values.append(value)
             }
             result = sqlite3_step(stmt)
         }
         
         sqlite3_finalize(stmt)
-        return models
-    }
     
-    public func insert<T>(_ table: T, models: [T.Model], shouldReplace: Bool) throws where T : Table {
+        return values
+    }
+
+ 
+    public func insert<T>(_ table: T.Type, models: [T.Model], shouldReplace: Bool) throws where T : Table {
         
         guard models.isEmpty == false else { return }
         
@@ -229,7 +258,7 @@ extension SQLiteDBConnection {
         try executeTransaction(stmt)
     }
     
-    public func update<T>(_ table: T, query: UpdateQuery<T>) throws where T : Table {
+    public func update<T>(_ table: T.Type, query: UpdateQuery<T>) throws where T : Table {
         
         try self.createTableOrNot(table)
         
@@ -244,7 +273,7 @@ extension SQLiteDBConnection {
         }
     }
     
-    public func delete<T>(_ table: T, query: DeleteQuery<T>) throws where T : Table {
+    public func delete<T>(_ table: T.Type, query: DeleteQuery<T>) throws where T : Table {
         
         try self.createTableOrNot(table)
         
