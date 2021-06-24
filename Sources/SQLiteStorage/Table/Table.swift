@@ -13,14 +13,12 @@ import SQLite3
 
 public protocol Table {
     
-    associatedtype Model
+    associatedtype Model: RowValueType
     associatedtype ColumnType: TableColumn
     
     static var tableName: String { get }
     
-    static func serialize(model: Model, for column: ColumnType) -> ScalarType?
-    
-    static func deserialize(_ cursor: OpaquePointer) throws -> Model
+    static func scalar(_ model: Model, for column: ColumnType) -> ScalarType?
     
     static var createStatement: String { get }
     
@@ -31,7 +29,7 @@ extension Table {
     
     public static func serialize(model: Model) throws -> [ScalarType?] {
         let allColumns = ColumnType.allCases
-        return allColumns.map{ self.serialize(model: model, for: $0) }
+        return allColumns.map{ self.scalar(model, for: $0) }
     }
 }
 
@@ -92,7 +90,7 @@ extension Table {
 
 extension OpaquePointer {
     
-    public subscript<T>(index: Int) -> T? {
+    subscript<T>(index: Int) -> T? {
         let index32 = index.asInt32
         let type = sqlite3_column_type(self, index32)
         switch type {

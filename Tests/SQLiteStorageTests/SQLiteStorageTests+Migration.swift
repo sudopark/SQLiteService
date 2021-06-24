@@ -39,7 +39,7 @@ extension SQLiteStorageTests_migration {
         """
         
         let insertStmts = users.map { user -> String in
-            let valueTexts = oldColumns.map{ self.table.serialize(model: user, for: $0) }.map{ $0.asStatementText() }
+            let valueTexts = oldColumns.map{ self.table.scalar(user, for: $0) }.map{ $0.asStatementText() }
             return """
                 INSERT OR IGNORE INTO \(tableName)
                 (\(keys.joined(separator: ", ")))

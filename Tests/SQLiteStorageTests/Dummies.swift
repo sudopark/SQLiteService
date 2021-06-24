@@ -16,15 +16,19 @@ enum Dummies { }
 
 extension Dummies {
     
-    struct Model {
+    struct Model: RowValueType {
         
         let k1: Int
         let k2: String
         
-        static func deserialize(_ cursor: OpaquePointer) throws -> Dummies.Model {
-            let int: Int = try cursor[0].unwrap()
-            let str: String = try cursor[1].unwrap()
-            return .init(k1: int, k2: str)
+        init(k1: Int, k2: String) {
+            self.k1 = k1
+            self.k2 = k2
+        }
+        
+        init(_ cursor: CursorIterator) throws {
+            self.k1 = try cursor.next().unwrap()
+            self.k2 = try cursor.next().unwrap()
         }
     }
 }
@@ -50,16 +54,11 @@ extension Dummies {
         typealias Model = Dummies.Model
         typealias ColumnType = Column
         
-        static func serialize(model: Dummies.Model, for column: Column) -> ScalarType? {
+        static func scalar(_ model: Dummies.Model, for column: Column) -> ScalarType? {
             switch column {
             case .k1: return model.k1
             case .k2: return model.k2
             }
-        }
-        
-        static func deserialize(_ cursor: OpaquePointer) throws -> Dummies.Model {
-            return .init(k1: try cursor[0].unwrap(),
-                         k2: try cursor[1].unwrap())
         }
     }
 
@@ -78,17 +77,11 @@ extension Dummies {
         typealias ColumnType = Column
         typealias Model = Dummies.Model
         
-        static func serialize(model: Dummies.Model, for column: Column) -> ScalarType? {
+        static func scalar(_ model: Dummies.Model, for column: Column) -> ScalarType? {
             switch column {
             case .c1: return model.k1
             case .c2: return model.k2
             }
-        }
-        
-        static func deserialize(_ cursor: OpaquePointer) throws -> Model {
-            
-            return .init(k1: try cursor[0].unwrap(),
-                         k2: try cursor[1].unwrap())
         }
     }
 
@@ -98,7 +91,7 @@ extension Dummies {
 extension Dummies {
     
     
-    struct TypesModel {
+    struct TypesModel: RowValueType {
         
         let primaryInt: Int
         let int: Int?
@@ -107,6 +100,27 @@ extension Dummies {
         let bool: Bool?
         let notnull: Int
         var withDefault: String
+        
+        init(primaryInt: Int, int: Int?, real: Double?, text: String?,
+             bool: Bool?, notnull: Int, withDefault: String) {
+            self.primaryInt = primaryInt
+            self.int = int
+            self.real = real
+            self.text = text
+            self.bool = bool
+            self.notnull = notnull
+            self.withDefault = withDefault
+        }
+        
+        init(_ cursor: CursorIterator) throws {
+            self.primaryInt = try cursor.next().unwrap()
+            self.int = cursor.next()
+            self.real = cursor.next()
+            self.text = cursor.next()
+            self.bool = cursor.next()
+            self.notnull = try cursor.next().unwrap()
+            self.withDefault = try cursor.next().unwrap()
+        }
     }
     
     struct TypesTable: Table {
@@ -140,7 +154,7 @@ extension Dummies {
         typealias Model = TypesModel
         typealias ColumnType = Column
         
-        static func serialize(model: Dummies.TypesModel, for column: Column) -> ScalarType? {
+        static func scalar(_ model: Dummies.TypesModel, for column: Column) -> ScalarType? {
             switch column {
             case .primaryInt: return model.primaryInt
             case .int: return model.int
@@ -150,17 +164,6 @@ extension Dummies {
             case .notnull: return model.notnull
             case .withDefault: return model.withDefault
             }
-        }
-        
-        static func deserialize(_ cursor: OpaquePointer) throws -> Dummies.TypesModel {
-            
-            return .init(primaryInt: try cursor[0].unwrap(),
-                         int: cursor[1],
-                         real: cursor[2],
-                         text: cursor[3],
-                         bool: cursor[4],
-                         notnull: try cursor[5].unwrap(),
-                         withDefault: cursor[6] ?? "default")
         }
     }
 }

@@ -38,8 +38,9 @@ extension SQLiteStorageTests {
         let userID: Int
         let age: Int?
         
-        static func deserialize(_ cursor: OpaquePointer) throws -> SQLiteStorageTests.UserAge {
-            return .init(userID: try cursor[0].unwrap(), age: cursor[1])
+        init(_ cursor: CursorIterator) throws {
+            self.userID = try cursor.next().unwrap()
+            self.age = cursor.next()
         }
     }
     
@@ -62,8 +63,9 @@ extension SQLiteStorageTests {
         let user: User
         let k2: String
         
-        static func deserialize(_ cursor: OpaquePointer) throws -> SQLiteStorageTests.UserWithK2 {
-            return .init(user: try UserTable.deserialize(cursor), k2: try cursor[4].unwrap())
+        init(_ cursor: CursorIterator) throws {
+            self.user = try User(cursor)
+            self.k2 = try cursor.next().unwrap()
         }
     }
     

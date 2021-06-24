@@ -211,33 +211,33 @@ extension SQLiteDBConnection {
     
     public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model] {
         
-        return try iterateDeserialize(query: query, deserialize: T.deserialize(_:))
+        return try iterateDeserialize(query: query, deserialize: T.Model.init)
     }
     
     public func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R] {
         
-        return try iterateDeserialize(query: query, deserialize: R.deserialize(_:))
+        return try iterateDeserialize(query: query, deserialize: R.init)
     }
     
     public func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S? {
         
-        return try iterateDeserialize(query: query, deserialize: { $0[0] }).first
+        return try iterateDeserialize(query: query, deserialize: { $0.next() }).first
     }
     
     public func load<T: Table, R: RowValueType>(_ query: JoinQuery<T>) throws -> [R] {
         
-        return try iterateDeserialize(query: query, deserialize: R.deserialize(_:))
+        return try iterateDeserialize(query: query, deserialize: R.init)
     }
     
     private func iterateDeserialize<V>(query: Query,
-                                       deserialize: (OpaquePointer) throws -> V?) throws -> [V] {
+                                       deserialize: (CursorIterator) throws -> V?) throws -> [V] {
         
         let stmt = try prepare(statement: query.asStatement())
         
         var values: [V] = []
         var result = sqlite3_step(stmt)
         while result == SQLITE_ROW {
-            if let cursor = stmt, let value = try? deserialize(cursor) {
+            if let cursor = stmt, let value = try? deserialize(CursorIterator(cursor)) {
                 values.append(value)
             }
             result = sqlite3_step(stmt)

@@ -51,11 +51,25 @@ class BaseSQLiteStorageTests: XCTestCase {
 
 extension BaseSQLiteStorageTests {
     
-    struct User: Equatable {
+    struct User: Equatable, RowValueType {
         let userID: Int
         let name: String
         var age: Int?
         var nickName: String?
+        
+        init(userID: Int, name: String, age: Int?, nickName: String?) {
+            self.userID = userID
+            self.name = name
+            self.age = age
+            self.nickName = nickName
+        }
+        
+        init(_ cursor: CursorIterator) throws {
+            self.userID = try cursor.next().unwrap()
+            self.name = try cursor.next().unwrap()
+            self.age = cursor.next()
+            self.nickName = cursor.next()
+        }
         
         static func == (_ lhs: Self, _ rhs: Self) -> Bool {
             return lhs.userID == rhs.userID
@@ -88,23 +102,13 @@ extension BaseSQLiteStorageTests {
         
         static var tableName: String { "users" }
         
-        static func serialize(model: SQLiteStorageTests_migration.User, for column: Column) -> ScalarType? {
+        static func scalar(_ model: SQLiteStorageTests_migration.User, for column: Column) -> ScalarType? {
             switch column {
             case .userID: return model.userID
             case .name: return model.name
             case .age: return model.age
             case .nickname: return model.nickName
             }
-        }
-        
-        static func deserialize(_ cursor: OpaquePointer) throws -> SQLiteStorageTests_migration.User {
-            
-            let id: Int = try cursor[0].unwrap()
-            let name: String = try cursor[1].unwrap()
-            let age: Int? = cursor[2]
-            let nickName: String? = cursor[3]
-            
-            return User(userID: id, name: name, age: age, nickName: nickName)
         }
         
         static var testRenameColumn: Bool = false
