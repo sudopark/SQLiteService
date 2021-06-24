@@ -76,7 +76,6 @@ extension SQLiteStorageTests_migration {
         let expect = expectation(description: "rename table name")
         let oldUsers = self.saveOldUserData(oldColumns: [.userID, .name, .age])
         
-        
         // when
         self.storage.migrate(upto: 2, steps: self.migrationSteps(_:_:)) { _ in
             expect.fulfill()
@@ -127,5 +126,57 @@ extension SQLiteStorageTests_migration {
         let query = self.table.selectAll()
         let migratedUsers = self.storage.run(execute: { try $0.load(self.table, query: query)}).unwrap()
         XCTAssertEqual(migratedUsers, oldUsers)
+    }
+}
+
+
+extension SQLiteStorageTests_migration {
+    
+    func testStorage_whenMigrate_waitSyncAccess() {
+        // given
+        let expect = expectation(description: "rename table name")
+        let _ = self.saveOldUserData(oldColumns: [.userID, .name, .age])
+        
+        self.storage.migrate(upto: 1, steps: { _, _ in
+            Thread.sleep(forTimeInterval: 0.5)
+        }) { _ in
+            expect.fulfill()
+        }
+        
+        // when
+        let query = self.table.selectAll()
+        let result = self.storage.run(execute: { try $0.load(self.table, query: query)})
+        self.wait(for: [expect], timeout: self.timeout)
+        
+        // then
+        XCTAssertNotNil(result)
+    }
+    
+    func testStorage_whenMigrate_waitASyncAccess() {
+        // given
+        let expect = expectation(description: "rename table name")
+        expect.expectedFulfillmentCount = 2
+        var migrationEnd: TimeInterval?
+        var userLoaded: TimeInterval?
+        
+        let _ = self.saveOldUserData(oldColumns: [.userID, .name, .age])
+        
+        self.storage.migrate(upto: 1, steps: { _, _ in
+            Thread.sleep(forTimeInterval: 0.5)
+        }) { _ in
+            migrationEnd = Date().timeIntervalSince1970
+            expect.fulfill()
+        }
+        
+        // when
+        let query = self.table.selectAll()
+        self.storage.run(execute: { try $0.load(self.table, query: query) }) { _ in
+            userLoaded = Date().timeIntervalSince1970
+            expect.fulfill()
+        }
+        self.wait(for: [expect], timeout: self.timeout)
+        
+        // then
+        XCTAssert(migrationEnd ?? 0 < userLoaded ?? -1)
     }
 }
