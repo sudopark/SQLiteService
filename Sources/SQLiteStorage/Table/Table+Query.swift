@@ -49,32 +49,32 @@ extension TableColumn {
 // MARK: - TableColumn -> QueryStatement.Condition, ConditionSet operations
 
 public func == <C: TableColumn, V: ScalarType & Equatable>(_ column: C,
-                                                                _ value: V) -> QueryExpression.Condition {
+                                                           _ value: V?) -> QueryExpression.Condition {
     return column.equal(value)
 }
 
 public func != <C: TableColumn, V: ScalarType & Equatable>(_ column: C,
-                                                                _ value: V) -> QueryExpression.Condition {
+                                                           _ value: V?) -> QueryExpression.Condition {
     return column.notEqual(value)
 }
 
 public func > <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
-                                                                _ value: V) -> QueryExpression.Condition {
+                                                           _ value: V) -> QueryExpression.Condition {
     return column.greateThan(value)
 }
 
 public func >= <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
-                                                                 _ value: V) -> QueryExpression.Condition {
+                                                            _ value: V) -> QueryExpression.Condition {
     return column.greateThanOrEqual(value)
 }
 
 public func < <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
-                                                                _ value: V) -> QueryExpression.Condition {
+                                                           _ value: V) -> QueryExpression.Condition {
     return column.lessThan(value)
 }
 
 public func <= <C: TableColumn, V: ScalarType & Comparable>(_ column: C,
-                                                                 _ value: V) -> QueryExpression.Condition {
+                                                            _ value: V) -> QueryExpression.Condition {
     return column.lessThanOrEqual(value)
 }
 
