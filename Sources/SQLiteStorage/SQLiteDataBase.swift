@@ -66,9 +66,9 @@ public protocol Connection {
 }
 
 
-// MARK: - SQLiteConnection
+// MARK: - SQLiteDataBase
 
-public class SQLiteDBConnection: Connection, DataBase {
+public class SQLiteDataBase: Connection, DataBase {
     
     private var dbPointer: OpaquePointer?
     
@@ -118,7 +118,7 @@ public class SQLiteDBConnection: Connection, DataBase {
 }
 
 
-extension SQLiteDBConnection {
+extension SQLiteDataBase {
     
     public func open(path: String) throws {
         
@@ -140,7 +140,7 @@ extension SQLiteDBConnection {
 }
 
 
-extension SQLiteDBConnection {
+extension SQLiteDataBase {
     
     public func userVersion() throws -> Int32 {
         let stmtText = "PRAGMA user_version;"
@@ -166,7 +166,7 @@ extension SQLiteDBConnection {
 }
 
 
-extension SQLiteDBConnection {
+extension SQLiteDataBase {
     
     
     public func createTableOrNot<T: Table>(_ table: T.Type) throws {
@@ -207,7 +207,7 @@ extension SQLiteDBConnection {
 }
 
 
-extension SQLiteDBConnection {
+extension SQLiteDataBase {
     
     public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model] {
         

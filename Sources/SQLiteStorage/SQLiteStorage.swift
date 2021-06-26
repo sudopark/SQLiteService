@@ -31,7 +31,7 @@ public class SQLiteStorage {
     private static let queueKey = DispatchSpecificKey<Int>()
     private lazy var serialQueueContext: Int = unsafeBitCast(self, to: Int.self)
     
-    public init(dbConnection: Connection & DataBase = SQLiteDBConnection(),
+    public init(dbConnection: Connection & DataBase = SQLiteDataBase(),
                 accessQueue: DispatchQueue? = nil,
                 migrationQueue: DispatchQueue? = nil) {
         self.dbConnection = dbConnection

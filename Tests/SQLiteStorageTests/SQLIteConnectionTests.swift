@@ -14,7 +14,7 @@ class SQLIteConnectionTests: XCTestCase {
     
     var dbPath: String!
     var table: Dummies.TypesTable.Type!
-    var connection: SQLiteDBConnection!
+    var connection: SQLiteDataBase!
     
     override func setUpWithError() throws {
         
