@@ -44,6 +44,15 @@ public class SQLiteStorage {
         self.accessBlockGroup.notify(queue: self.serialAccessQueue, execute: action)
     }
     
+    public func open(path: String) -> Result<Void, Error> {
+        do {
+            try self.dbConnection.open(path: path)
+            return .success(())
+        } catch let error {
+            return .failure(error)
+        }
+    }
+    
     public func open(path: String, _ completed: @escaping (Result<Void, Error>) -> Void) {
         
         self.waitForMigrationFinishIfNeed { [weak self] in
@@ -56,6 +65,17 @@ public class SQLiteStorage {
                     completed(.failure(error))
                 }
             }
+        }
+    }
+    
+    @discardableResult
+    public func close() -> Result<Void, Error> {
+        do {
+            try self.dbConnection.close()
+            return .success(())
+            
+        } catch let error {
+            return .failure(error)
         }
     }
     
