@@ -264,8 +264,6 @@ extension SQLiteDataBase {
     
     public func update<T>(_ table: T.Type, query: UpdateQuery<T>) throws where T : Table {
         
-        try self.createTableOrNot(table)
-        
         let stmt = try prepare(statement: query.asStatement())
         
         defer {
@@ -278,8 +276,6 @@ extension SQLiteDataBase {
     }
     
     public func delete<T>(_ table: T.Type, query: DeleteQuery<T>) throws where T : Table {
-        
-        try self.createTableOrNot(table)
         
         let stmt = try prepare(statement: query.asStatement())
         
