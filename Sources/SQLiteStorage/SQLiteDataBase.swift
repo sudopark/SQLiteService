@@ -209,9 +209,9 @@ extension SQLiteDataBase {
 
 extension SQLiteDataBase {
     
-    public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model] {
+    public func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S? {
         
-        return try iterateDeserialize(query: query, deserialize: T.Model.init)
+        return try iterateDeserialize(query: query, deserialize: { $0.next() }).first
     }
     
     public func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R] {
@@ -219,14 +219,24 @@ extension SQLiteDataBase {
         return try iterateDeserialize(query: query, deserialize: R.init)
     }
     
-    public func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S? {
+    public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model] {
         
-        return try iterateDeserialize(query: query, deserialize: { $0.next() }).first
+        return try iterateDeserialize(query: query, deserialize: T.Model.init)
+    }
+    
+    public func load<T: Table, V>(_ query: SelectQuery<T>,
+                                  mapping: (CursorIterator) throws -> V) throws -> [V] {
+        return try iterateDeserialize(query: query, deserialize: mapping)
     }
     
     public func load<T: Table, R: RowValueType>(_ query: JoinQuery<T>) throws -> [R] {
         
         return try iterateDeserialize(query: query, deserialize: R.init)
+    }
+    
+    public func load<T: Table, V>(_ query: JoinQuery<T>,
+                                  mapping: (CursorIterator) throws -> V?) throws -> [V] {
+        return try iterateDeserialize(query: query, deserialize: mapping)
     }
     
     private func iterateDeserialize<V>(query: Query,

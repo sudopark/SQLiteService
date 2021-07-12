@@ -1,5 +1,5 @@
 //
-//  SQLIteConnectionTests.swift
+//  SQLiteDatabaseTests.swift
 //  
 //
 //  Created by sudo.park on 2021/06/19.
@@ -10,11 +10,11 @@ import XCTest
 @testable import SQLiteStorage
 
 
-class SQLIteConnectionTests: XCTestCase {
+class SQLiteDatabaseTests: XCTestCase {
     
     var dbPath: String!
     var table: Dummies.TypesTable.Type!
-    var connection: SQLiteDataBase!
+    var database: SQLiteDataBase!
     
     override func setUpWithError() throws {
         
@@ -24,29 +24,29 @@ class SQLIteConnectionTests: XCTestCase {
                         .appendingPathComponent(dbName)
                         .path
         self.dbPath = path
-        self.connection = .init()
+        self.database = .init()
     }
     
     override func tearDownWithError() throws {
-        try? self.connection.close()
+        try? self.database.close()
         try? FileManager.default.removeItem(atPath: self.dbPath)
-        self.connection = nil
+        self.database = nil
         self.table = nil
         self.dbPath = nil
     }
 }
 
 
-extension SQLIteConnectionTests {
+extension SQLiteDatabaseTests {
     
     // open
-    func testConnection_open() {
+    func testDatabase_open() {
         // given
         var isOpened = false
         
         // when
         do {
-            try self.connection.open(path: dbPath)
+            try self.database.open(path: dbPath)
             isOpened = true
         } catch {}
         
@@ -54,14 +54,14 @@ extension SQLIteConnectionTests {
         XCTAssertEqual(isOpened, true)
     }
     
-    func testConnection_OpenAndClose() {
+    func testDatabase_OpenAndClose() {
         // given
         var isClosed = false
         
         // when
         do {
-            try self.connection.open(path: self.dbPath)
-            try self.connection.close()
+            try self.database.open(path: self.dbPath)
+            try self.database.close()
             isClosed = true
         } catch {}
         
@@ -69,13 +69,13 @@ extension SQLIteConnectionTests {
         XCTAssertEqual(isClosed, true)
     }
     
-    func testConnection_whenCloseNotOpenedConnection_error() {
+    func testDatabase_whenCloseNotOpenedConnection_error() {
         // given
         var closeError: Error?
         
         // when
         do {
-            try self.connection.close()
+            try self.database.close()
         } catch let error {
             closeError = error
         }
@@ -85,18 +85,18 @@ extension SQLIteConnectionTests {
     }
     
     private func openDataBase() {
-        try? self.connection.open(path: self.dbPath)
+        try? self.database.open(path: self.dbPath)
     }
     
     // create table
-    func testConnection_createTable() {
+    func testDatabase_createTable() {
         // given
         var isCreated = false
         self.openDataBase()
         
         // when
         do {
-            try self.connection.createTableOrNot(self.table)
+            try self.database.createTableOrNot(self.table)
             isCreated = true
         } catch { }
         
@@ -106,15 +106,15 @@ extension SQLIteConnectionTests {
     
     // drop
     
-    func testConnection_dropExistingTable() {
+    func testDatabase_dropExistingTable() {
         // given
         var isDroped = false
         self.openDataBase()
         
         // when
         do {
-            try self.connection.createTableOrNot(self.table)
-            try self.connection.dropTable(self.table)
+            try self.database.createTableOrNot(self.table)
+            try self.database.dropTable(self.table)
             isDroped = true
         }catch {}
         
@@ -124,7 +124,7 @@ extension SQLIteConnectionTests {
 }
 
 
-extension SQLIteConnectionTests {
+extension SQLiteDatabaseTests {
     
     private var dummyModels: [Dummies.TypesModel] {
         return (0..<10).map { int -> Dummies.TypesModel in
@@ -132,15 +132,15 @@ extension SQLIteConnectionTests {
         }
     }
     
-    func testConnection_insertModels() {
+    func testDatabase_insertModels() {
         // given
         self.openDataBase()
-        try? self.connection.createTableOrNot(self.table)
+        try? self.database.createTableOrNot(self.table)
         var inserted: Bool = false
         
         // when
         do {
-            try self.connection.insert(self.table, models: self.dummyModels, shouldReplace: true)
+            try self.database.insert(self.table, models: self.dummyModels, shouldReplace: true)
             inserted = true
         } catch {}
         
@@ -148,14 +148,14 @@ extension SQLIteConnectionTests {
         XCTAssertEqual(inserted, true)
     }
     
-    func testConnection_whenInsertDataAtNoExistingTable_createTableAndSave() {
+    func testDatabase_whenInsertDataAtNoExistingTable_createTableAndSave() {
         // given
         self.openDataBase()
         var inserted: Bool = false
         
         // when
         do {
-            try self.connection.insert(self.table, models: self.dummyModels, shouldReplace: true)
+            try self.database.insert(self.table, models: self.dummyModels, shouldReplace: true)
             inserted = true
         } catch {}
         
@@ -165,10 +165,10 @@ extension SQLIteConnectionTests {
     
     private func prepareSavedDatas() {
         self.openDataBase()
-        try? self.connection.insert(self.table, models: self.dummyModels, shouldReplace: true)
+        try? self.database.insert(self.table, models: self.dummyModels, shouldReplace: true)
     }
     
-    func testConnection_loadInsertedDatas() {
+    func testDatabase_loadInsertedDatas() {
         // given
         self.prepareSavedDatas()
         var models: [Dummies.TypesModel]?
@@ -176,14 +176,33 @@ extension SQLIteConnectionTests {
         // when
         do {
             let query = self.table.selectAll()
-            models = try self.connection.load(self.table, query: query)
+            models = try self.database.load(self.table, query: query)
         } catch { }
         
         // then
         XCTAssertEqual(models?.count, 10)
     }
     
-    func testConnection_updateSavedValue() {
+    func testDatabase_loadDataAndMapping() {
+        // given
+        self.prepareSavedDatas()
+        var models: [Dummies.TypesModel]?
+        
+        let mapping: (CursorIterator) throws -> Dummies.TypesModel = { cursor in
+            return try .init(cursor)
+        }
+        
+        // when
+        do {
+            let query = self.table.selectAll()
+            models = try self.database.load(query, mapping: mapping)
+        } catch { }
+        
+        // then
+        XCTAssertEqual(models?.count, 10)
+    }
+    
+    func testDatabase_updateSavedValue() {
         // given
         self.prepareSavedDatas()
         var model5: Dummies.TypesModel?
@@ -191,10 +210,10 @@ extension SQLIteConnectionTests {
         // when
         do {
             let updateQuery = self.table.update(replace: { [$0.int == 100] })
-            try self.connection.update(self.table, query: updateQuery)
+            try self.database.update(self.table, query: updateQuery)
             
             let selectQuery = self.table.selectAll().where{ $0.primaryInt == 5 }
-            model5 = try self.connection.load(self.table, query: selectQuery).first
+            model5 = try self.database.load(self.table, query: selectQuery).first
 
         } catch {}
         
@@ -202,7 +221,7 @@ extension SQLIteConnectionTests {
         XCTAssertEqual(model5?.int, 100)
     }
     
-    func testConnection_deleteSavedModels() {
+    func testDatabase_deleteSavedModels() {
         // given
         self.prepareSavedDatas()
         var models: [Dummies.TypesModel]?
@@ -210,10 +229,10 @@ extension SQLIteConnectionTests {
         // when
         do {
             let deleteQuery = self.table.delete().where{ $0.primaryInt == 5 }
-            try self.connection.delete(self.table, query: deleteQuery)
+            try self.database.delete(self.table, query: deleteQuery)
             
             let selectQuery = self.table.selectAll()
-            models = try self.connection.load(self.table, query: selectQuery)
+            models = try self.database.load(self.table, query: selectQuery)
         } catch { }
         
         // then
