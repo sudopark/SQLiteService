@@ -7,13 +7,13 @@
 
 import XCTest
 
-@testable import SQLiteStorage
+@testable import SQLiteService
 
 
-class SQLiteStorageTests_migration: BaseSQLiteStorageTests { }
+class SQLiteServiceTests_migration: BaseSQLiteServiceTests { }
 
 
-extension SQLiteStorageTests_migration {
+extension SQLiteServiceTests_migration {
     
     func migrationSteps(_ version: Int32, _ database: DataBase) throws {
         switch version {
@@ -49,46 +49,46 @@ extension SQLiteStorageTests_migration {
         }
         
         let stmts = ([createStmt] + insertStmts).joined(separator: "\n")
-        self.storage.run(execute: { try $0.executeTransaction(stmts) })
+        self.service.run(execute: { try $0.executeTransaction(stmts) })
         
         return users
     }
     
-    func testStorage_migration_addColumn() {
+    func testService_migration_addColumn() {
         // given
         let expect = expectation(description: "add column migration")
         let oldUsers = self.saveOldUserData(oldColumns: [.userID, .name, .age])
         
         // when
-        self.storage.migrate(upto: 1, steps: self.migrationSteps) { _ in
+        self.service.migrate(upto: 1, steps: self.migrationSteps) { _ in
             expect.fulfill()
         }
         self.wait(for: [expect], timeout: self.timeout)
         
         // then
         let query = self.table.selectAll()
-        let migratedUsers = self.storage.run(execute: { try $0.load(self.table, query: query)}).unwrap()
+        let migratedUsers = self.service.run(execute: { try $0.load(self.table, query: query)}).unwrap()
         XCTAssertEqual(migratedUsers, oldUsers)
     }
     
-    func testStorage_migration_renameTable() {
+    func testService_migration_renameTable() {
         // given
         let expect = expectation(description: "rename table name")
         let oldUsers = self.saveOldUserData(oldColumns: [.userID, .name, .age])
         
         // when
-        self.storage.migrate(upto: 2, steps: self.migrationSteps(_:_:)) { _ in
+        self.service.migrate(upto: 2, steps: self.migrationSteps(_:_:)) { _ in
             expect.fulfill()
         }
         self.wait(for: [expect], timeout: self.timeout)
         
         // then
         let query = self.table.selectAll()
-        let migratedUsers = self.storage.run(execute: { try $0.load(self.table, query: query)}).unwrap()
+        let migratedUsers = self.service.run(execute: { try $0.load(self.table, query: query)}).unwrap()
         XCTAssertEqual(migratedUsers, oldUsers)
     }
     
-    func testStorage_migration_renmaeColumnName() {
+    func testService_migration_renmaeColumnName() {
         // given
         let expect = expectation(description: "rename table name")
         let oldUsers = self.dummyUsers
@@ -113,31 +113,31 @@ extension SQLiteStorageTests_migration {
         }
         
         let stmts = ([createStmt] + insertStmts).joined(separator: "\n")
-        self.storage.run(execute: { try $0.executeTransaction(stmts) })
+        self.service.run(execute: { try $0.executeTransaction(stmts) })
         
         // when
         self.table.testRenameColumn = true
-        self.storage.migrate(upto: 1, steps: self.migrationSteps(_:_:)) { _ in
+        self.service.migrate(upto: 1, steps: self.migrationSteps(_:_:)) { _ in
             expect.fulfill()
         }
         self.wait(for: [expect], timeout: self.timeout)
         
         // then
         let query = self.table.selectAll()
-        let migratedUsers = self.storage.run(execute: { try $0.load(self.table, query: query)}).unwrap()
+        let migratedUsers = self.service.run(execute: { try $0.load(self.table, query: query)}).unwrap()
         XCTAssertEqual(migratedUsers, oldUsers)
     }
 }
 
 
-extension SQLiteStorageTests_migration {
+extension SQLiteServiceTests_migration {
     
-    func testStorage_whenMigrate_waitSyncAccess() {
+    func testService_whenMigrate_waitSyncAccess() {
         // given
         let expect = expectation(description: "rename table name")
         let _ = self.saveOldUserData(oldColumns: [.userID, .name, .age])
         
-        self.storage.migrate(upto: 1, steps: { _, _ in
+        self.service.migrate(upto: 1, steps: { _, _ in
             Thread.sleep(forTimeInterval: 0.5)
         }) { _ in
             expect.fulfill()
@@ -145,14 +145,14 @@ extension SQLiteStorageTests_migration {
         
         // when
         let query = self.table.selectAll()
-        let result = self.storage.run(execute: { try $0.load(self.table, query: query)})
+        let result = self.service.run(execute: { try $0.load(self.table, query: query)})
         self.wait(for: [expect], timeout: self.timeout)
         
         // then
         XCTAssertNotNil(result)
     }
     
-    func testStorage_whenMigrate_waitASyncAccess() {
+    func testService_whenMigrate_waitASyncAccess() {
         // given
         let expect = expectation(description: "rename table name")
         expect.expectedFulfillmentCount = 2
@@ -161,7 +161,7 @@ extension SQLiteStorageTests_migration {
         
         let _ = self.saveOldUserData(oldColumns: [.userID, .name, .age])
         
-        self.storage.migrate(upto: 1, steps: { _, _ in
+        self.service.migrate(upto: 1, steps: { _, _ in
             Thread.sleep(forTimeInterval: 0.5)
         }) { _ in
             migrationEnd = Date().timeIntervalSince1970
@@ -170,7 +170,7 @@ extension SQLiteStorageTests_migration {
         
         // when
         let query = self.table.selectAll()
-        self.storage.run(execute: { try $0.load(self.table, query: query) }) { _ in
+        self.service.run(execute: { try $0.load(self.table, query: query) }) { _ in
             userLoaded = Date().timeIntervalSince1970
             expect.fulfill()
         }

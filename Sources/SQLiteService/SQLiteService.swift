@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  SQLiteService.swift
 //  
 //
 //  Created by sudo.park on 2021/06/19.
@@ -21,7 +21,7 @@ private extension DispatchQueue {
 }
 
 
-public class SQLiteStorage {
+public class SQLiteService {
 
     private let dbConnection: Connection & DataBase
     private let serialAccessQueue: DispatchQueue
@@ -95,7 +95,7 @@ public class SQLiteStorage {
     }
 }
 
-extension SQLiteStorage {
+extension SQLiteService {
     
     @discardableResult
     public func run<T>(execute: (DataBase) throws -> T) -> Result<T, Error> {
@@ -133,7 +133,7 @@ extension SQLiteStorage {
 }
 
 
-extension SQLiteStorage {
+extension SQLiteService {
     
     public func migrate(upto version: Int32,
                         steps: @escaping (Int32, DataBase) throws -> Void,

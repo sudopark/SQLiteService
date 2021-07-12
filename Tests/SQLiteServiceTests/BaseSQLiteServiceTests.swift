@@ -1,5 +1,5 @@
 //
-//  BaseSQLiteStorageTests.swift
+//  BaseSQLiteServiceTests.swift
 //  
 //
 //  Created by sudo.park on 2021/06/20.
@@ -7,14 +7,14 @@
 
 import XCTest
 
-@testable import SQLiteStorage
+@testable import SQLiteService
 
 
-class BaseSQLiteStorageTests: XCTestCase {
+class BaseSQLiteServiceTests: XCTestCase {
     
     var dbPath: String!
     var table: UserTable.Type!
-    var storage: SQLiteStorage!
+    var service: SQLiteService!
     
     var timeout: TimeInterval { 1 }
     
@@ -24,20 +24,20 @@ class BaseSQLiteStorageTests: XCTestCase {
                         .path
         self.dbPath = path
         self.table = UserTable.self
-        self.storage = .init()
+        self.service = .init()
     }
     
     override func tearDownWithError() throws {
-        self.storage.close{ _ in }
+        self.service.close{ _ in }
         self.table = nil
-        self.storage = nil
+        self.service = nil
         try FileManager.default.removeItem(atPath: self.dbPath)
         self.dbPath = nil
     }
     
     func waitOpenDatabase() {
         let expect = expectation(description: "wait open and save users")
-        self.storage.open(path: self.dbPath) { _ in
+        self.service.open(path: self.dbPath) { _ in
             expect.fulfill()
         }
         self.wait(for: [expect], timeout: self.timeout)
@@ -49,7 +49,7 @@ class BaseSQLiteStorageTests: XCTestCase {
 }
 
 
-extension BaseSQLiteStorageTests {
+extension BaseSQLiteServiceTests {
     
     struct User: Equatable, RowValueType {
         let userID: Int
@@ -102,7 +102,7 @@ extension BaseSQLiteStorageTests {
         
         static var tableName: String { "users" }
         
-        static func scalar(_ model: SQLiteStorageTests_migration.User, for column: Column) -> ScalarType? {
+        static func scalar(_ model: SQLiteServiceTests_migration.User, for column: Column) -> ScalarType? {
             switch column {
             case .userID: return model.userID
             case .name: return model.name

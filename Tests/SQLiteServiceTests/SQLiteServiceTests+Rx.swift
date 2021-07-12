@@ -9,10 +9,10 @@ import Foundation
 
 import RxSwift
 
-@testable import RxSQLiteStorage
+@testable import RxSQLiteService
 
 
-class SQLiteStorageTests_Rx: BaseSQLiteStorageTests {
+class SQLiteServiceTests_Rx: BaseSQLiteServiceTests {
     
     var disposeBag: DisposeBag!
     
@@ -28,15 +28,15 @@ class SQLiteStorageTests_Rx: BaseSQLiteStorageTests {
 }
 
 
-extension SQLiteStorageTests_Rx {
+extension SQLiteServiceTests_Rx {
     
     
-    func testStorage_open() {
+    func testService_open() {
         // given
         let expect = expectation(description: "open database")
         
         // when
-        self.storage.rx.open(path: self.dbPath)
+        self.service.rx.open(path: self.dbPath)
             .subscribe(onSuccess: expect.fulfill)
             .disposed(by: self.disposeBag)
         
@@ -44,15 +44,15 @@ extension SQLiteStorageTests_Rx {
         self.wait(for: [expect], timeout: self.timeout)
     }
     
-    func testStorage_openAndClose() {
+    func testService_openAndClose() {
         // given
         let expect = expectation(description: "open and close database")
         let table = UserTable.self
         
         // when
-        let open = self.storage.rx.open(path: self.dbPath)
-        let andSaveSomeData = self.storage.rx.run(execute: { try $0.insert(table, models: self.dummyUsers) })
-        let thenClose = self.storage.rx.close()
+        let open = self.service.rx.open(path: self.dbPath)
+        let andSaveSomeData = self.service.rx.run(execute: { try $0.insert(table, models: self.dummyUsers) })
+        let thenClose = self.service.rx.close()
         
         open.flatMap{ _ in andSaveSomeData }.flatMap{ _ in thenClose }
             .subscribe(onSuccess: expect.fulfill)
@@ -62,15 +62,15 @@ extension SQLiteStorageTests_Rx {
         self.wait(for: [expect], timeout: self.timeout)
     }
     
-    func testStorage_whenSyncAfterAsync_shouldNotDeadlock() {
+    func testService_whenSyncAfterAsync_shouldNotDeadlock() {
         // given
         let expect = expectation(description: "open and close database")
         let table = UserTable.self
         
         // when
-        let asyncOpen = self.storage.rx.open(path: self.dbPath )
+        let asyncOpen = self.service.rx.open(path: self.dbPath )
         let doSyncJob: () -> Single<Void> = {
-            self.storage.run(execute: { try $0.createTableOrNot(table) })
+            self.service.run(execute: { try $0.createTableOrNot(table) })
             return .just(())
         }
         asyncOpen.flatMap(doSyncJob)

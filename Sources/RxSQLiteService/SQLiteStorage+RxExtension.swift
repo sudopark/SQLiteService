@@ -8,14 +8,14 @@
 import Foundation
 
 import RxSwift
-import SQLiteStorage
+import SQLiteService
 
 
 
-extension SQLiteStorage: ReactiveCompatible { }
+extension SQLiteService: ReactiveCompatible { }
 
 
-extension Reactive where Base == SQLiteStorage {
+extension Reactive where Base == SQLiteService {
     
     public func open(path: String) -> Single<Void> {
         return Single.create { [weak base] callback in

@@ -7,7 +7,7 @@
 
 import XCTest
 
-@testable import SQLiteStorage
+@testable import SQLiteService
 
 class QueryStatementTests: XCTestCase {
     

@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  SQLiteServiceTests.swift
 //  
 //
 //  Created by sudo.park on 2021/06/21.
@@ -7,19 +7,19 @@
 
 import XCTest
 
-@testable import SQLiteStorage
+@testable import SQLiteService
 
 
-class SQLiteStorageTests: BaseSQLiteStorageTests { }
+class SQLiteServiceTests: BaseSQLiteServiceTests { }
 
-extension SQLiteStorageTests {
+extension SQLiteServiceTests {
     
     private func saveDummyUsers() {
         let users = self.dummyUsers
-        self.storage.run(execute: { try $0.insert(UserTable.self, models: users, shouldReplace: true)})
+        self.service.run(execute: { try $0.insert(UserTable.self, models: users, shouldReplace: true)})
     }
     
-    func testStorage_loadScalar() {
+    func testService_loadScalar() {
         // given
         self.waitOpenDatabase()
         self.saveDummyUsers()
@@ -27,7 +27,7 @@ extension SQLiteStorageTests {
         // when
         let users = UserTable.self
         let query = users.selectSome{ [$0.name] }.where{ $0.userID == 3 }
-        let loadResult: Result<String?, Error> = self.storage.run(execute: { try $0.load(query) })
+        let loadResult: Result<String?, Error> = self.service.run(execute: { try $0.load(query) })
         
         // then
         let name = loadResult.unwrap()
@@ -44,7 +44,7 @@ extension SQLiteStorageTests {
         }
     }
     
-    func testStorage_loadRowValue() {
+    func testService_loadRowValue() {
         // given
         self.waitOpenDatabase()
         self.saveDummyUsers()
@@ -52,7 +52,7 @@ extension SQLiteStorageTests {
         // when
         let users = UserTable.self
         let query = users.selectSome{ [$0.userID, $0.age] }
-        let loadResult: Result<[UserAge], Error> = self.storage.run(execute: { try $0.load(query) })
+        let loadResult: Result<[UserAge], Error> = self.service.run(execute: { try $0.load(query) })
         
         // then
         let ages = loadResult.unwrap()?.map{ $0.age }
@@ -69,19 +69,19 @@ extension SQLiteStorageTests {
         }
     }
     
-    func testStorage_loadUserJoinWithOtherTable() {
+    func testService_loadUserJoinWithOtherTable() {
         // given
         self.waitOpenDatabase()
         self.saveDummyUsers()
         let dummies: [Dummies.Model] = (0..<10).map{ .init(k1: $0, k2: "some:\($0)") }
-        self.storage.run(execute: { try $0.insert(Dummies.Table1.self, models: dummies, shouldReplace: true) })
+        self.service.run(execute: { try $0.insert(Dummies.Table1.self, models: dummies, shouldReplace: true) })
         
         // when
         let users = UserTable.self
         let userSelect = users.selectAll()
         let dummySelect = Dummies.Table1.selectSome{ _ in [.k2] }
         let joinQuery = userSelect.innerJoin(with: dummySelect, on: { ($0.userID, $1.k1) })
-        let loadResult: Result<[UserWithK2], Error> = self.storage.run(execute: { try $0.load(joinQuery) })
+        let loadResult: Result<[UserWithK2], Error> = self.service.run(execute: { try $0.load(joinQuery) })
         
         // then
         let userK2s = loadResult.unwrap()

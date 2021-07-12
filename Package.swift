@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "SQLiteStorage",
+    name: "SQLiteService",
     platforms: [
         .macOS(.v10_12),
         .iOS(.v10),
@@ -13,8 +13,8 @@ let package = Package(
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
-        .library(name: "SQLiteStorage", targets: ["SQLiteStorage"]),
-        .library(name: "RxSQLiteStorage", targets: ["RxSQLiteStorage"])
+        .library(name: "SQLiteService", targets: ["SQLiteService"]),
+        .library(name: "RxSQLiteService", targets: ["RxSQLiteService"])
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -23,9 +23,9 @@ let package = Package(
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
-        .target(name: "SQLiteStorage", dependencies: []),
-        .target(name: "RxSQLiteStorage", dependencies: ["SQLiteStorage", "RxSwift"]),
-        .testTarget(name: "SQLiteStorageTests", dependencies: ["SQLiteStorage", "RxSQLiteStorage"]),
+        .target(name: "SQLiteService", dependencies: []),
+        .target(name: "RxSQLiteService", dependencies: ["SQLiteService", "RxSwift"]),
+        .testTarget(name: "SQLiteServiceTests", dependencies: ["SQLiteService", "RxSQLiteService"]),
     ],
     swiftLanguageVersions: [.v5]
 )

@@ -7,7 +7,7 @@
 
 import Foundation
 
-@testable import SQLiteStorage
+@testable import SQLiteService
 
 
 
