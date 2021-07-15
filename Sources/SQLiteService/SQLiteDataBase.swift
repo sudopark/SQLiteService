@@ -23,13 +23,19 @@ public protocol DataBase {
 
     func migrate<T: Table>(_ table: T.Type, version: Int32) throws
     
-    func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model]
+    func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S?
     
     func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R]
     
-    func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S?
+    func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model]
+    
+    func load<T: Table, V>(_ query: SelectQuery<T>,
+                           mapping: (CursorIterator) throws -> V) throws -> [V]
     
     func load<T: Table, R: RowValueType>(_ query: JoinQuery<T>) throws -> [R]
+    
+    func load<T: Table, V>(_ query: JoinQuery<T>,
+                           mapping: (CursorIterator) throws -> V) throws -> [V]
     
     func insert<T: Table>(_ table: T.Type, models: [T.Model], shouldReplace: Bool) throws
     
@@ -42,9 +48,31 @@ public protocol DataBase {
 
 extension DataBase {
     
+    public func loadOne<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> R? {
+        let query = query.limit(1)
+        return try self.load(query).first
+    }
+    
     public func loadOne<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> T.Model? {
         let query = query.limit(1)
         return try self.load(table, query: query).first
+    }
+    
+    public func loadOne<T: Table, V>(_ query: SelectQuery<T>,
+                                  mapping: (CursorIterator) throws -> V) throws -> V? {
+        let query = query.limit(1)
+        return try self.load(query, mapping: mapping).first
+    }
+    
+    public func loadOne<T: Table, R: RowValueType>(_ query: JoinQuery<T>) throws -> R? {
+        let query = query.limit(1)
+        return try self.load(query).first
+    }
+    
+    public func loadOne<T: Table, V>(_ query: JoinQuery<T>,
+                                     mapping: (CursorIterator) throws -> V) throws -> V? {
+        let query = query.limit(1)
+        return  try self.load(query, mapping: mapping).first
     }
     
     public func insertOne<T: Table>(_ table: T.Type, model: T.Model, shouldReplace: Bool) throws {
@@ -235,7 +263,7 @@ extension SQLiteDataBase {
     }
     
     public func load<T: Table, V>(_ query: JoinQuery<T>,
-                                  mapping: (CursorIterator) throws -> V?) throws -> [V] {
+                                  mapping: (CursorIterator) throws -> V) throws -> [V] {
         return try iterateDeserialize(query: query, deserialize: mapping)
     }
     

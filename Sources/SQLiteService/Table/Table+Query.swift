@@ -138,13 +138,13 @@ extension Table {
     }
     
     public static func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
-                           with condition: (ColumnType.Type) -> QueryExpression.Condition) -> SelectQuery<Self> {
+                                  with condition: (ColumnType.Type) -> QueryExpression.Condition) -> SelectQuery<Self> {
         return self.selectSome(columns)
             .where(condition(ColumnType.self))
     }
     
     public static func selectSome(_ columns: (ColumnType.Type) -> [ColumnType],
-                           with conditios: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SelectQuery<Self> {
+                                  with conditios: (ColumnType.Type) -> QueryExpression.ConditionSet) -> SelectQuery<Self> {
         return self.selectSome(columns)
             .where(conditios(ColumnType.self))
     }
