@@ -27,7 +27,7 @@ public protocol DataBase {
     
     func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R]
     
-    func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model]
+    func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Entity]
     
     func load<T: Table, V>(_ query: SelectQuery<T>,
                            mapping: (CursorIterator) throws -> V) throws -> [V]
@@ -37,7 +37,7 @@ public protocol DataBase {
     func load<T: Table, V>(_ query: JoinQuery<T>,
                            mapping: (CursorIterator) throws -> V) throws -> [V]
     
-    func insert<T: Table>(_ table: T.Type, models: [T.Model], shouldReplace: Bool) throws
+    func insert<T: Table>(_ table: T.Type, entities: [T.Entity], shouldReplace: Bool) throws
     
     func update<T: Table>(_ table: T.Type, query: UpdateQuery<T>) throws
     
@@ -53,7 +53,7 @@ extension DataBase {
         return try self.load(query).first
     }
     
-    public func loadOne<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> T.Model? {
+    public func loadOne<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> T.Entity? {
         let query = query.limit(1)
         return try self.load(table, query: query).first
     }
@@ -75,12 +75,12 @@ extension DataBase {
         return  try self.load(query, mapping: mapping).first
     }
     
-    public func insertOne<T: Table>(_ table: T.Type, model: T.Model, shouldReplace: Bool) throws {
-        try self.insert(table, models: [model], shouldReplace: shouldReplace)
+    public func insertOne<T: Table>(_ table: T.Type, entity: T.Entity, shouldReplace: Bool) throws {
+        try self.insert(table, entities: [entity], shouldReplace: shouldReplace)
     }
     
-    public func insert<T: Table>(_ table: T.Type, models: [T.Model]) throws {
-        return try self.insert(table, models: models, shouldReplace: true)
+    public func insert<T: Table>(_ table: T.Type, entities: [T.Entity]) throws {
+        return try self.insert(table, entities: entities, shouldReplace: true)
     }
 }
 
@@ -247,9 +247,9 @@ extension SQLiteDataBase {
         return try iterateDeserialize(query: query, deserialize: R.init)
     }
     
-    public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Model] {
+    public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.Entity] {
         
-        return try iterateDeserialize(query: query, deserialize: T.Model.init)
+        return try iterateDeserialize(query: query, deserialize: T.Entity.init)
     }
     
     public func load<T: Table, V>(_ query: SelectQuery<T>,
@@ -287,14 +287,14 @@ extension SQLiteDataBase {
     }
 
  
-    public func insert<T>(_ table: T.Type, models: [T.Model], shouldReplace: Bool) throws where T : Table {
+    public func insert<T>(_ table: T.Type, entities: [T.Entity], shouldReplace: Bool) throws where T : Table {
         
-        guard models.isEmpty == false else { return }
+        guard entities.isEmpty == false else { return }
         
         try self.createTableOrNot(table)
         
-        let stmt = try models
-            .map{ try table.insertStatement(model: $0, shouldReplace: shouldReplace) }
+        let stmt = try entities
+            .map{ try table.insertStatement(entity: $0, shouldReplace: shouldReplace) }
             .joined(separator: "\n")
         
         try executeTransaction(stmt)

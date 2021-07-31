@@ -51,7 +51,7 @@ extension SQLiteServiceTests_Rx {
         
         // when
         let open = self.service.rx.open(path: self.dbPath)
-        let andSaveSomeData = self.service.rx.run(execute: { try $0.insert(table, models: self.dummyUsers) })
+        let andSaveSomeData = self.service.rx.run(execute: { try $0.insert(table, entities: self.dummyUsers) })
         let thenClose = self.service.rx.close()
         
         open.flatMap{ _ in andSaveSomeData }.flatMap{ _ in thenClose }

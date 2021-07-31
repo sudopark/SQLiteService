@@ -16,7 +16,7 @@ extension SQLiteServiceTests {
     
     private func saveDummyUsers() {
         let users = self.dummyUsers
-        self.service.run(execute: { try $0.insert(UserTable.self, models: users, shouldReplace: true)})
+        self.service.run(execute: { try $0.insert(UserTable.self, entities: users, shouldReplace: true)})
     }
     
     func testService_loadScalar() {
@@ -73,8 +73,8 @@ extension SQLiteServiceTests {
         // given
         self.waitOpenDatabase()
         self.saveDummyUsers()
-        let dummies: [Dummies.Model] = (0..<10).map{ .init(k1: $0, k2: "some:\($0)") }
-        self.service.run(execute: { try $0.insert(Dummies.Table1.self, models: dummies, shouldReplace: true) })
+        let dummies: [Dummies.Entity] = (0..<10).map{ .init(k1: $0, k2: "some:\($0)") }
+        self.service.run(execute: { try $0.insert(Dummies.Table1.self, entities: dummies, shouldReplace: true) })
         
         // when
         let users = UserTable.self

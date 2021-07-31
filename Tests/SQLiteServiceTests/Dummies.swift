@@ -16,7 +16,7 @@ enum Dummies { }
 
 extension Dummies {
     
-    struct Model: RowValueType {
+    struct Entity: RowValueType {
         
         let k1: Int
         let k2: String
@@ -51,13 +51,13 @@ extension Dummies {
             }
         }
         
-        typealias Model = Dummies.Model
+        typealias Entity = Dummies.Entity
         typealias ColumnType = Column
         
-        static func scalar(_ model: Dummies.Model, for column: Column) -> ScalarType? {
+        static func scalar(_ entity: Dummies.Entity, for column: Column) -> ScalarType? {
             switch column {
-            case .k1: return model.k1
-            case .k2: return model.k2
+            case .k1: return entity.k1
+            case .k2: return entity.k2
             }
         }
     }
@@ -75,12 +75,12 @@ extension Dummies {
         }
         
         typealias ColumnType = Column
-        typealias Model = Dummies.Model
+        typealias Entity = Dummies.Entity
         
-        static func scalar(_ model: Dummies.Model, for column: Column) -> ScalarType? {
+        static func scalar(_ entity: Dummies.Entity, for column: Column) -> ScalarType? {
             switch column {
-            case .c1: return model.k1
-            case .c2: return model.k2
+            case .c1: return entity.k1
+            case .c2: return entity.k2
             }
         }
     }
@@ -91,7 +91,7 @@ extension Dummies {
 extension Dummies {
     
     
-    struct TypesModel: RowValueType {
+    struct TypesEntity: RowValueType {
         
         let primaryInt: Int
         let int: Int?
@@ -151,18 +151,18 @@ extension Dummies {
         }
         
         
-        typealias Model = TypesModel
+        typealias Entity = TypesEntity
         typealias ColumnType = Column
         
-        static func scalar(_ model: Dummies.TypesModel, for column: Column) -> ScalarType? {
+        static func scalar(_ entity: Dummies.TypesEntity, for column: Column) -> ScalarType? {
             switch column {
-            case .primaryInt: return model.primaryInt
-            case .int: return model.int
-            case .real: return model.real
-            case .text: return model.text
-            case .bool: return model.bool
-            case .notnull: return model.notnull
-            case .withDefault: return model.withDefault
+            case .primaryInt: return entity.primaryInt
+            case .int: return entity.int
+            case .real: return entity.real
+            case .text: return entity.text
+            case .bool: return entity.bool
+            case .notnull: return entity.notnull
+            case .withDefault: return entity.withDefault
             }
         }
     }

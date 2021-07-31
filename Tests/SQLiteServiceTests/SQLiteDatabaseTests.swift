@@ -126,8 +126,8 @@ extension SQLiteDatabaseTests {
 
 extension SQLiteDatabaseTests {
     
-    private var dummyModels: [Dummies.TypesModel] {
-        return (0..<10).map { int -> Dummies.TypesModel in
+    private var dummyEntities: [Dummies.TypesEntity] {
+        return (0..<10).map { int -> Dummies.TypesEntity in
             return .init(primaryInt: int, int: nil, real: nil, text: nil, bool: nil, notnull: int, withDefault: "\(int)")
         }
     }
@@ -140,7 +140,7 @@ extension SQLiteDatabaseTests {
         
         // when
         do {
-            try self.database.insert(self.table, models: self.dummyModels, shouldReplace: true)
+            try self.database.insert(self.table, entities: self.dummyEntities, shouldReplace: true)
             inserted = true
         } catch {}
         
@@ -155,7 +155,7 @@ extension SQLiteDatabaseTests {
         
         // when
         do {
-            try self.database.insert(self.table, models: self.dummyModels, shouldReplace: true)
+            try self.database.insert(self.table, entities: self.dummyEntities, shouldReplace: true)
             inserted = true
         } catch {}
         
@@ -165,13 +165,13 @@ extension SQLiteDatabaseTests {
     
     private func prepareSavedDatas() {
         self.openDataBase()
-        try? self.database.insert(self.table, models: self.dummyModels, shouldReplace: true)
+        try? self.database.insert(self.table, entities: self.dummyEntities, shouldReplace: true)
     }
     
     func testDatabase_loadInsertedDatas() {
         // given
         self.prepareSavedDatas()
-        var models: [Dummies.TypesModel]?
+        var models: [Dummies.TypesEntity]?
         
         // when
         do {
@@ -186,9 +186,9 @@ extension SQLiteDatabaseTests {
     func testDatabase_loadDataAndMapping() {
         // given
         self.prepareSavedDatas()
-        var models: [Dummies.TypesModel]?
+        var models: [Dummies.TypesEntity]?
         
-        let mapping: (CursorIterator) throws -> Dummies.TypesModel = { cursor in
+        let mapping: (CursorIterator) throws -> Dummies.TypesEntity = { cursor in
             return try .init(cursor)
         }
         
@@ -205,7 +205,7 @@ extension SQLiteDatabaseTests {
     func testDatabase_updateSavedValue() {
         // given
         self.prepareSavedDatas()
-        var model5: Dummies.TypesModel?
+        var model5: Dummies.TypesEntity?
         
         // when
         do {
@@ -224,7 +224,7 @@ extension SQLiteDatabaseTests {
     func testDatabase_deleteSavedModels() {
         // given
         self.prepareSavedDatas()
-        var models: [Dummies.TypesModel]?
+        var models: [Dummies.TypesEntity]?
         
         // when
         do {

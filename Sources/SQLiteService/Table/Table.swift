@@ -13,12 +13,12 @@ import SQLite3
 
 public protocol Table {
     
-    associatedtype Model: RowValueType
+    associatedtype Entity: RowValueType
     associatedtype ColumnType: TableColumn
     
     static var tableName: String { get }
     
-    static func scalar(_ model: Model, for column: ColumnType) -> ScalarType?
+    static func scalar(_ entity: Entity, for column: ColumnType) -> ScalarType?
     
     static var createStatement: String { get }
     
@@ -27,9 +27,9 @@ public protocol Table {
 
 extension Table {
     
-    public static func serialize(model: Model) throws -> [ScalarType?] {
+    public static func serialize(entity: Entity) throws -> [ScalarType?] {
         let allColumns = ColumnType.allCases
-        return allColumns.map{ self.scalar(model, for: $0) }
+        return allColumns.map{ self.scalar(entity, for: $0) }
     }
 }
 
@@ -46,11 +46,11 @@ extension Table {
         return "\(prefix)\(columnStrings)\(suffix)"
     }
     
-    public static func insertStatement(model: Model, shouldReplace: Bool) throws -> String {
+    public static func insertStatement(entity: Entity, shouldReplace: Bool) throws -> String {
         let orAnd = shouldReplace ? "REPLACE" : "IGNORE"
         let prefix = "INSERT OR \(orAnd) INTO \(Self.tableName)"
         let keyStrings = ColumnType.allCases.map{ $0.rawValue }.joined(separator: ", ")
-        let valueStrings = try self.serialize(model: model)
+        let valueStrings = try self.serialize(entity: entity)
             .map{ $0.asStatementText() }
             .joined(separator: ", ")
         return "\(prefix) (\(keyStrings)) VALUES (\(valueStrings));"

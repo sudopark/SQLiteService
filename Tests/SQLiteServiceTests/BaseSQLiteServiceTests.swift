@@ -97,17 +97,17 @@ extension BaseSQLiteServiceTests {
             }
         }
         
-        typealias Model = User
+        typealias Entity = User
         typealias ColumnType = Column
         
         static var tableName: String { "users" }
         
-        static func scalar(_ model: SQLiteServiceTests_migration.User, for column: Column) -> ScalarType? {
+        static func scalar(_ entity: SQLiteServiceTests_migration.User, for column: Column) -> ScalarType? {
             switch column {
-            case .userID: return model.userID
-            case .name: return model.name
-            case .age: return model.age
-            case .nickname: return model.nickName
+            case .userID: return entity.userID
+            case .name: return entity.name
+            case .age: return entity.age
+            case .nickname: return entity.nickName
             }
         }
         
