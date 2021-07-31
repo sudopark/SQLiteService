@@ -27,7 +27,7 @@ extension SQLiteServiceTests {
         // when
         let users = UserTable.self
         let query = users.selectSome{ [$0.name] }.where{ $0.userID == 3 }
-        let loadResult: Result<String?, Error> = self.service.run(execute: { try $0.load(query) })
+        let loadResult: Result<String?, Error> = self.service.run(execute: { try $0.loadValue(query) })
         
         // then
         let name = loadResult.unwrap()

@@ -23,7 +23,7 @@ public protocol DataBase {
 
     func migrate<T: Table>(_ table: T.Type, version: Int32) throws
     
-    func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S?
+    func loadValue<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S?
     
     func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R]
     
@@ -237,7 +237,7 @@ extension SQLiteDataBase {
 
 extension SQLiteDataBase {
     
-    public func load<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S? {
+    public func loadValue<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S? {
         
         return try iterateDeserialize(query: query, deserialize: { $0.next() }).first
     }
