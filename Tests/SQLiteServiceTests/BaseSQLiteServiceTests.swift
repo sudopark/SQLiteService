@@ -97,7 +97,7 @@ extension BaseSQLiteServiceTests {
             }
         }
         
-        typealias Entity = User
+        typealias EntityType = User
         typealias ColumnType = Column
         
         static var tableName: String { "users" }

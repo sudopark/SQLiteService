@@ -51,7 +51,7 @@ extension Dummies {
             }
         }
         
-        typealias Entity = Dummies.Entity
+        typealias EntityType = Dummies.Entity
         typealias ColumnType = Column
         
         static func scalar(_ entity: Dummies.Entity, for column: Column) -> ScalarType? {
@@ -75,7 +75,7 @@ extension Dummies {
         }
         
         typealias ColumnType = Column
-        typealias Entity = Dummies.Entity
+        typealias EntityType = Dummies.Entity
         
         static func scalar(_ entity: Dummies.Entity, for column: Column) -> ScalarType? {
             switch column {
@@ -151,7 +151,7 @@ extension Dummies {
         }
         
         
-        typealias Entity = TypesEntity
+        typealias EntityType = TypesEntity
         typealias ColumnType = Column
         
         static func scalar(_ entity: Dummies.TypesEntity, for column: Column) -> ScalarType? {
