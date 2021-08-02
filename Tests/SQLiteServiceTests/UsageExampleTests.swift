@@ -214,6 +214,7 @@ extension UsageExampleTests {
         _ = self.service.run(execute: { try $0.insert(table, entities: [.init(oldUser)]) })
         
         let updateQuery = table.update { [$0.introduction == "newIntro"]}
+            .where{ $0.uid == "uid:1" }
         _ = self.service.run(execute: { try $0.update(table, query: updateQuery) })
         
         let selectQuery = table.selectAll{ $0.uid == "uid:1" }

@@ -1,6 +1,17 @@
 # SQLiteService
 
-A description of this package.
+It is a library for easier and type-safe use of sqlite in the apple device(ios/macos) environment.
+
+
+## Installation
+Currently, only SPM is supported.
+
+
+## How to use it
+
+The interface of SQLiteService simply consists of open/close + run + migration. The operation that returns the Result type is synchronous, and when the Result is passed to the completion handler, it operates asynchronously. (Synchronous operations of asynchronous operation + run action are executed after the migration operation is finished internally in SQLiteService.)
+
+The run method should be called with a closure of this type: ```(DataBase) throws -> T``` indicating what action to take and what the result type is. ```(DataBase)``` follows the ```Connection & DataBase``` protocol. Please refer to the protocol for which functions are supported. (Instead of using SQLiteService, you can directly handle ```SQLiteDataBase``` objects that conforms the ```Connection & DataBase``` protocol.)
 
 
 ### open and close database
@@ -28,6 +39,34 @@ private func openDatabaseAndCloseExample() {
 
 
 ### Table
+```Table``` must be defined with ```ColumnType``` and ```EntityType```.
+Use ```ColumnType``` to specify the column name and stored data type.
+```EntityType``` must conform to ```RowValueType```, which means that the query result can be returned as a data model.
+```swift
+
+// MARK: - TableColumn
+
+public protocol TableColumn: RawRepresentable, CaseIterable where RawValue == String {
+    
+    var dataType: ColumnDataType { get }
+}
+
+// MARK: - RowValuetype
+
+public protocol RowValueType {
+    
+    init(_ cursor: CursorIterator) throws
+}
+
+public protocol Table {
+    
+    associatedtype EntityType: RowValueType
+    associatedtype ColumnType: TableColumn
+    ...
+}
+```
+
+Below are examples of ```UserTable``` and ```PetTable``` that store user and pet information.
 
 ```swift
 
@@ -171,7 +210,12 @@ struct PetTable: Table {
 
 ```
 
+Another requirement for tables is to indicate which property of the entity matches each column using the ```static func scalar(_ entity: Entity, for column: Columns) -> ScalarType?``` type method.
+(Actual data is stored by matching entity property values according to the order of columns following the ```CaseIterable``` protocol.)
+
 ### data manipulation
+
+Here are some basic data manipulation usages.
 
 ```swift
 func testSaveDataUsaga() {
@@ -227,6 +271,7 @@ func testUpdateUsage() {
     _ = self.service.run(execute: { try $0.insert(table, entities: [.init(oldUser)]) })
     
     let updateQuery = table.update { [$0.introduction == "newIntro"]}
+        .where{ $0.uid == "uid:1" }
     _ = self.service.run(execute: { try $0.update(table, query: updateQuery) })
     
     let selectQuery = table.selectAll{ $0.uid == "uid:1" }
@@ -281,3 +326,7 @@ func testJoinQueryUsage() {
 ```
 
 For more information on how to use it, see unit tests.
+
+
+**As you can see from the readme, this project has a lot of missing features and a lot of room for improvement. Feedback or contributions to the project are always welcome. 🙏**
+
