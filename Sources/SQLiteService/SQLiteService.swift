@@ -114,6 +114,11 @@ extension SQLiteService {
         let isRunningOnSerialAccessQueue = DispatchQueue.getSpecific(key: Self.queueKey) == self.serialQueueContext
         return isRunningOnSerialAccessQueue ? runEexecute() : self.serialAccessQueue.sync(execute: runEexecute)
     }
+    
+    @discardableResult
+    public func run<T>(_ type: T.Type, execute: (DataBase) throws -> T) -> Result<T, Error> {
+        return self.run(execute: execute)
+    }
 
     public func run<T>(execute: @escaping (DataBase) throws -> T,
                        completed: @escaping (Result<T, Error>) -> Void) {
@@ -129,6 +134,12 @@ extension SQLiteService {
                 }
             }
         }
+    }
+    
+    public func run<T>(_ type: T.Type,
+                       execute: @escaping (DataBase) throws -> T,
+                       completed: @escaping (Result<T, Error>) -> Void) {
+        self.run(execute: execute, completed: completed)
     }
 }
 
