@@ -51,12 +51,13 @@ extension Reactive where Base == SQLiteService {
     }
     
     public func migration(upto version: Int32,
-                          steps: @escaping (Int32, DataBase) throws -> Void) -> Single<Int32> {
+                          steps: @escaping (Int32, DataBase) throws -> Void,
+                          finalized: ((Int32, DataBase) -> Void)? = nil) -> Single<Int32> {
         
         return Single.create { [weak base] callback in
         
             guard let storage = base else { return Disposables.create() }
-            storage.migrate(upto: version, steps: steps, completed: callback)
+            storage.migrate(upto: version, steps: steps, finalized: finalized, completed: callback)
         
             return Disposables.create()
         }

@@ -60,25 +60,29 @@ extension Table {
         return "DROP TABLE IF EXISTS \(Self.tableName)"
     }
     
-    public static func renameStatement(_ oldName: String) -> String {
+    public static func renameStatement(from oldName: String) -> String {
         return "ALTER TABLE \(oldName) RENAME TO \(Self.tableName);"
     }
     
-    public static func addColumnStatement(_ column: ColumnType) -> String {
-        return "ALTER TABLE \(Self.tableName) ADD COLUMN \(column.toString());"
+    public static func addColumnStatement(_ column: ColumnType, oldTableName: String? = nil) -> String {
+        let tableName = oldTableName ?? self.tableName
+        return "ALTER TABLE \(tableName) ADD COLUMN \(column.toString());"
     }
     
     public static func modfiyColumns(tempTable: String? = nil,
-                              to newColumns: [String],
-                              from oldColumns: [String]) -> String {
+                                     oldTableName: String? = nil,
+                                     to newColumns: [String],
+                                     from oldColumns: [String]) -> String {
+        
+        let tableName = oldTableName ?? self.tableName
         
         let fromColumns = oldColumns.joined(separator: ", ")
         let toColumns = newColumns.joined(separator: ", ")
         
-        let tempTable = tempTable ?? "temp_\(Self.tableName)"
-        let copyStmt = "INSERT INTO \(tempTable) (\(toColumns)) select \(fromColumns) from \(Self.tableName);"
+        let tempTable = tempTable ?? "temp_\(tableName)"
+        let copyStmt = "INSERT INTO \(tempTable) (\(toColumns)) select \(fromColumns) from \(tableName);"
         let dropStmt = self.dropStatement
-        let renameStmt = self.renameStatement(tempTable)
+        let renameStmt = self.renameStatement(from: tempTable)
         
         return [copyStmt, dropStmt, renameStmt].joined(separator: "\n")
     }

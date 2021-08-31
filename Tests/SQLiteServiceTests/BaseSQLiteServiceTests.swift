@@ -79,7 +79,7 @@ extension BaseSQLiteServiceTests {
         }
     }
 
-    class UserTable: Table {
+    struct UserTable: Table {
         
         enum Column: String, TableColumn {
             case userID
@@ -116,14 +116,14 @@ extension BaseSQLiteServiceTests {
         static func migrateStatement(for version: Int32) -> String? {
             switch version {
             case 0 where Self.testRenameColumn == false:
-                return Self.addColumnStatement(.nickname)
-                
-            case 0 where Self.testRenameColumn == true:
-                return Self.modfiyColumns(to: Column.allCases.map{ $0.rawValue },
-                                          from: ["userID", "old_name", "age", "nickname"])
+                return Self.addColumnStatement(.nickname, oldTableName: "old_users")
                 
             case 1:
-                return self.renameStatement("old_users")
+                return self.renameStatement(from: "old_users")
+                
+            case 2 where Self.testRenameColumn == true:
+                return Self.modfiyColumns(to: Column.allCases.map{ $0.rawValue },
+                                          from: ["userID", "old_name", "age", "nickname"])
                 
             default: return nil
             }

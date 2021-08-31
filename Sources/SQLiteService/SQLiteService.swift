@@ -137,6 +137,7 @@ extension SQLiteService {
     
     public func migrate(upto version: Int32,
                         steps: @escaping (Int32, DataBase) throws -> Void,
+                        finalized: ((Int32, DataBase) -> Void)? = nil,
                         completed: @escaping (Result<Int32, Error>) -> Void) {
         
         
@@ -147,12 +148,15 @@ extension SQLiteService {
             do {
                 let currentVersion = try self.dbConnection.userVersion()
                 let newVersion = try self.runMigrationSteps(currentVersion: currentVersion,
-                                                            upto: version, migrationJob: steps)
+                                                            upto: version,
+                                                            migrationJob: steps,
+                                                            finalizingJob: finalized)
                 self.accessBlockGroup.leave()
                 completed(.success(newVersion))
                 
             } catch let error {
                 self.accessBlockGroup.leave()
+                print("errror: \(error)")
                 completed(.failure(error))
             }
         }
@@ -160,14 +164,20 @@ extension SQLiteService {
     
     private func runMigrationSteps(currentVersion: Int32,
                                    upto targetVersion: Int32,
-                                   migrationJob: @escaping (Int32, DataBase) throws -> Void) throws -> Int32 {
+                                   migrationJob: @escaping (Int32, DataBase) throws -> Void,
+                                   finalizingJob: ((Int32, DataBase) -> Void)?) throws -> Int32 {
         
-        guard currentVersion < targetVersion else { return currentVersion }
+        guard currentVersion < targetVersion else {
+            finalizingJob?(currentVersion, self.dbConnection)
+            return currentVersion
+        }
         try migrationJob(currentVersion, self.dbConnection)
         let nextVersion = currentVersion + 1
         try self.dbConnection.updateUserVersion(nextVersion)
         
         return try runMigrationSteps(currentVersion: nextVersion,
-                                     upto: targetVersion, migrationJob: migrationJob)
+                                     upto: targetVersion,
+                                     migrationJob: migrationJob,
+                                     finalizingJob: finalizingJob)
     }
 }
