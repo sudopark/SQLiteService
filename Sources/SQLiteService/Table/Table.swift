@@ -39,11 +39,27 @@ extension Table {
 extension Table {
     
     public static var createStatement: String {
+        let primaryColumns = self.ColumnType.allCases.filter{ $0.isPrimaryKey }
+        return primaryColumns.isEmpty
+            ? self.createStatementForSinglePrimaryKey()
+            : self.createStatementForMultiplePrimaryKeys(primaryColumns)
+    }
+    
+    private static func createStatementForSinglePrimaryKey() -> String {
         let prefix = "CREATE TABLE IF NOT EXISTS \(Self.tableName) ("
         let columns = ColumnType.allCases.map{ $0 }
         let columnStrings = columns.map{ $0.toString() }.joined(separator: ", ")
         let suffix = ");"
         return "\(prefix)\(columnStrings)\(suffix)"
+    }
+    
+    private static func createStatementForMultiplePrimaryKeys(_ primaryKeyColumns: [ColumnType]) -> String {
+        let prefix = "CREATE TABLE IF NOT EXISTS \(Self.tableName) ("
+        let columns = ColumnType.allCases.map{ $0 }
+        let columnStrings = columns.map{ $0.toString(withoutPrimaryKey: true) }.joined(separator: ", ")
+        let primaryKey = primaryKeyColumns.asPrimaryKeyStrings()
+        let suffix = ");"
+        return "\(prefix)\(columnStrings),\(primaryKey)\(suffix)"
     }
     
     public static func insertStatement(entity: EntityType, shouldReplace: Bool) throws -> String {
@@ -122,6 +138,27 @@ extension Optional {
         switch self {
         case .some(let unwraped): return unwraped
         case .none: throw SQLiteErrors.step("unwrap")
+        }
+    }
+}
+
+private extension ColumnDataAttribute {
+    
+    var isPrimaryKey: Bool {
+        guard case .primaryKey = self else { return false }
+        return true
+    }
+}
+
+private extension TableColumn {
+    
+    var isPrimaryKey: Bool {
+        switch self.dataType {
+        case let .integer(attrs),
+             let .real(attrs),
+             let .char(_, attrs),
+             let .text(attrs):
+            return attrs.contains(where: { $0.isPrimaryKey} )
         }
     }
 }

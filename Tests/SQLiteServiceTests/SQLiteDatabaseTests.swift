@@ -239,4 +239,30 @@ extension SQLiteDatabaseTests {
         XCTAssertEqual(models?.count, 9)
         XCTAssertNil(models?.first(where: { $0.primaryInt == 5 }))
     }
+    
+    func testDatabase_tableHasMulitplePrimaryKey() {
+        // given
+        self.openDataBase()
+        
+        let table = Dummies.DoubleKeyTable.self
+        typealias Entity = Dummies.DoubleKeyTable.Entity
+        
+        let e11 = Entity(k1: 1, k2: 1)
+        let e12 = Entity(k1: 1, k2: 2)
+        let e21 = Entity(k1: 2, k2: 1)
+        let e22 = Entity(k1: 2, k2: 2)
+        
+        let entities = [e11, e12, e21, e22]
+        try? self.database.insert(table, entities: entities)
+        
+        // when
+        let newE12 = Entity(k1: 1, k2: 2, rand: "new")
+        try? self.database.insert(table, entities: [newE12], shouldReplace: false)
+        
+        // then
+        let query = table.selectAll()
+        let loadedEntities = try? self.database.load(table, query: query)
+        XCTAssertEqual(loadedEntities?.count, 4)
+        XCTAssertEqual(loadedEntities?.first(where: { $0.k1 == 1 && $0.k2 == 2})?.rand, e12.rand)
+    }
 }

@@ -166,4 +166,53 @@ extension Dummies {
             }
         }
     }
+    
+    
+    struct DoubleKeyTable: Table {
+        
+        struct Entity: RowValueType {
+            let k1: Int
+            let k2: Int
+            let rand: String
+            
+            init(k1: Int, k2: Int, rand: String? = nil) {
+                self.k1 = k1
+                self.k2 = k2
+                self.rand = rand ?? UUID().uuidString
+            }
+            
+            init(_ cursor: CursorIterator) throws {
+                self.k1 = try cursor.next().unwrap()
+                self.k2 = try cursor.next().unwrap()
+                self.rand = try cursor.next().unwrap()
+            }
+        }
+        
+        enum Columns: String, TableColumn {
+            case k1
+            case k2
+            case rand
+            
+            var dataType: ColumnDataType {
+                switch self {
+                case .k1: return .integer([.primaryKey(autoIncrement: false), .notNull])
+                case .k2: return .integer([.primaryKey(autoIncrement: false), .notNull])
+                case .rand: return .text([.notNull])
+                }
+            }
+        }
+        
+        typealias EntityType = Entity
+        typealias ColumnType = Columns
+        
+        static var tableName: String { "doublekeys" }
+        
+        static func scalar(_ entity: Entity, for column: Columns) -> ScalarType? {
+            switch column {
+            case .k1: return entity.k1
+            case .k2: return entity.k2
+            case .rand: return entity.rand
+            }
+        }
+    }
 }

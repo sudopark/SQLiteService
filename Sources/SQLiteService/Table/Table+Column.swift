@@ -18,10 +18,12 @@ public enum ColumnDataAttribute {
     case unique
     case `default`(_ value: ScalarType)
     
-    func toString() -> String {
+    func toString(_ withoutPrimaryKey: Bool = false) -> String {
         switch self {
-        case let .primaryKey(autoIncrement: flag):
+        case let .primaryKey(autoIncrement: flag) where withoutPrimaryKey == false:
             return flag == false ? "PRIMARY KEY" : "PRIMARY KEY AUTOINCREMENT"
+        case .primaryKey:
+            return ""
         case .notNull:
             return "NOT NULL"
         case .unique:
@@ -40,7 +42,7 @@ public enum ColumnDataType {
     case real(_ attributes: [ColumnDataAttribute])
     case char(_ size: Int, _ attributes: [ColumnDataAttribute])
     
-    func toString() -> String {
+    func toString(_ withoutPrimaryKey: Bool = false) -> String {
         let prefix: String
         let attributes: [ColumnDataAttribute]
         
@@ -62,7 +64,9 @@ public enum ColumnDataType {
             attributes = attrs
         }
         
-        let suffix = attributes.isEmpty ? "" : " \(attributes.map{ $0.toString() }.joined(separator: " "))"
+        let suffix = attributes.isEmpty
+            ? ""
+            : " \(attributes.map{ $0.toString(withoutPrimaryKey) }.filter{ $0.isEmpty == false }.joined(separator: " "))"
         return "\(prefix)\(suffix)"
     }
     
@@ -88,9 +92,19 @@ public protocol TableColumn: RawRepresentable, CaseIterable where RawValue == St
 
 extension TableColumn {
     
-    func toString() -> String {
+    func toString(withoutPrimaryKey: Bool = false) -> String {
         let key = "\(self.rawValue)"
-        let type = self.dataType.toString()
+        let type = self.dataType.toString(withoutPrimaryKey)
         return "\(key) \(type)"
+    }
+}
+
+
+extension Array where Element: TableColumn {
+    
+    func asPrimaryKeyStrings() -> String {
+        let prefix = "PRIMARY KEY"
+        let columnNames = self.map{ $0.rawValue }.joined(separator: ", ")
+        return "\(prefix) (\(columnNames))"
     }
 }
