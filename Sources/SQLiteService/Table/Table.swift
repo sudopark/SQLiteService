@@ -41,11 +41,11 @@ extension Table {
     public static var createStatement: String {
         let primaryColumns = self.ColumnType.allCases.filter{ $0.isPrimaryKey }
         return primaryColumns.isEmpty
-            ? self.createStatementForSinglePrimaryKey()
-            : self.createStatementForMultiplePrimaryKeys(primaryColumns)
+            ? self.createStatementWithoutPrimaryKey()
+            : self.createStatementWithPrimaryKeys(primaryColumns)
     }
     
-    private static func createStatementForSinglePrimaryKey() -> String {
+    private static func createStatementWithoutPrimaryKey() -> String {
         let prefix = "CREATE TABLE IF NOT EXISTS \(Self.tableName) ("
         let columns = ColumnType.allCases.map{ $0 }
         let columnStrings = columns.map{ $0.toString() }.joined(separator: ", ")
@@ -53,7 +53,7 @@ extension Table {
         return "\(prefix)\(columnStrings)\(suffix)"
     }
     
-    private static func createStatementForMultiplePrimaryKeys(_ primaryKeyColumns: [ColumnType]) -> String {
+    private static func createStatementWithPrimaryKeys(_ primaryKeyColumns: [ColumnType]) -> String {
         let prefix = "CREATE TABLE IF NOT EXISTS \(Self.tableName) ("
         let columns = ColumnType.allCases.map{ $0 }
         let columnStrings = columns.map{ $0.toString(withoutPrimaryKey: true) }.joined(separator: ", ")
