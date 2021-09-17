@@ -235,6 +235,25 @@ extension QueryStatementTests {
         ])
     }
     
+    func testCondition_isNull() {
+        // given
+        let conditions: [QueryExpression.Condition] = [
+            .init(key: "k", operation: .equal, value: "some"),
+            .init(key: "k", operation: .equal, value: nil),
+            .init(key: "k", operation: .isNull, value: nil),
+        ]
+        
+        // when
+        let texts = conditions.compactMap{ try? $0.asStatementText() }
+        
+        // then
+        XCTAssertEqual(texts, [
+            "k = \'some\'",
+            "k IS NULL",
+            "k IS NULL",
+        ])
+    }
+    
     func testCondition_whenInOperatorWithNotArray_error() {
         // given
         let inCondition: Condition = .init(key: "some", operation: .in, value: 1)

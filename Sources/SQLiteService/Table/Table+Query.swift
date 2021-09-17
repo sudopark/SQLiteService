@@ -12,6 +12,10 @@ import Foundation
 
 extension TableColumn {
     
+    public func isNull() -> QueryExpression.Condition {
+        return .init(key: self.rawValue, operation: .isNull, value: nil)
+    }
+    
     public func equal<V: ScalarType & Equatable>(_ value: V?) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .equal, value: value)
     }

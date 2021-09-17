@@ -37,6 +37,7 @@ extension QueryExpression {
     public struct Condition {
         
         enum Operator {
+            case isNull
             case equal
             case notEqual
             case greaterThan(orEqual: Bool)
@@ -183,6 +184,10 @@ extension QueryExpression.Condition {
     
     func asStatementText() throws -> String {
         switch self.operation {
+        case .isNull,
+             .equal where self.value == nil:
+            return "\(self.column) IS NULL"
+            
         case .equal:
             return "\(self.column) = \(self.value.asStatementText())"
             

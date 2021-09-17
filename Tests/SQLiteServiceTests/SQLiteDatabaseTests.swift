@@ -265,4 +265,28 @@ extension SQLiteDatabaseTests {
         XCTAssertEqual(loadedEntities?.count, 4)
         XCTAssertEqual(loadedEntities?.first(where: { $0.k1 == 1 && $0.k2 == 2})?.rand, e12.rand)
     }
+    
+    func testDatabase_loadIsNull() {
+        // given
+        self.openDataBase()
+        let items: [Dummies.TypesEntity] = [
+            .init(primaryInt: 0, int: 0, real: 0, text: nil, bool: nil, notnull: 0, withDefault: ""),
+            .init(primaryInt: 1, int: nil, real: 1, text: nil, bool: nil, notnull: 1, withDefault: ""),
+            .init(primaryInt: 2, int: nil, real: 2, text: nil, bool: nil, notnull: 2, withDefault: ""),
+        ]
+        try? self.database.insert(self.table, entities: items)
+        
+        var intNullModels: [Dummies.TypesEntity]?
+        
+        // when
+        do {
+            let selectQuery = self.table.selectAll { $0.int.isNull() }
+            intNullModels = try self.database.load(self.table, query: selectQuery)
+
+        } catch {}
+        
+        // then
+        XCTAssertEqual(intNullModels?.map{ $0.primaryInt }, [1, 2])
+        XCTAssertEqual(intNullModels?.map{ $0.int }, [nil, nil])
+    }
 }
