@@ -289,4 +289,27 @@ extension SQLiteDatabaseTests {
         XCTAssertEqual(intNullModels?.map{ $0.primaryInt }, [1, 2])
         XCTAssertEqual(intNullModels?.map{ $0.int }, [nil, nil])
     }
+    
+    func testDatabase_loadUsingLike() {
+        // given
+        self.openDataBase()
+        let items: [Dummies.TypesEntity] = [
+            .init(primaryInt: 0, int: 0, real: 0, text: "abc", bool: nil, notnull: 0, withDefault: ""),
+            .init(primaryInt: 1, int: nil, real: 1, text: "ddd", bool: nil, notnull: 1, withDefault: ""),
+            .init(primaryInt: 2, int: nil, real: 2, text: "ab12", bool: nil, notnull: 2, withDefault: ""),
+        ]
+        try? self.database.insert(self.table, entities: items)
+        
+        var models: [Dummies.TypesEntity]?
+        
+        // when
+        do {
+            let selectQuery = self.table.selectAll { $0.text.like("ab%") }
+            models = try self.database.load(self.table, query: selectQuery)
+            
+        } catch { }
+        
+        // then
+        XCTAssertEqual(models?.map { $0.text }, ["abc", "ab12"])
+    }
 }

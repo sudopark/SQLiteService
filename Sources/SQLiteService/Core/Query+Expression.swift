@@ -44,6 +44,7 @@ extension QueryExpression {
             case lessThan(orEqual: Bool)
             case `in`
             case notIn
+            case like
             
             var isEqualOperation: Bool {
                 guard case .equal = self else { return false }
@@ -213,6 +214,9 @@ extension QueryExpression.Condition {
             }
             let arrayText = array.map{ $0.toString() }.joined(separator: ", ")
             return "\(self.column) NOT IN (\(arrayText))"
+            
+        case .like:
+            return "\(self.column) LIKE \(self.value.asStatementText())"
         }
     }
 }
