@@ -47,6 +47,10 @@ extension TableColumn {
     public func notIn<V: ScalarType>(_ values: [V]) -> QueryExpression.Condition {
         return .init(key: self.rawValue, operation: .notIn, value: values)
     }
+    
+    public func like(_ value: String) -> QueryExpression.Condition {
+        return .init(key: self.rawValue, operation: .like, value: value)
+    }
 }
 
 

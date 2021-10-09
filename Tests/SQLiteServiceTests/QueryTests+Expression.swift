@@ -23,7 +23,8 @@ class QueryStatementTests: XCTestCase {
             .init(key: "key", operation: .lessThan(orEqual: false), value: 1),
             .init(key: "key", operation: .lessThan(orEqual: true), value: 1),
             .init(key: "key", operation: .in, value: [1, 2, 3]),
-            .init(key: "key", operation: .notIn, value: [1, 2, 3])
+            .init(key: "key", operation: .notIn, value: [1, 2, 3]),
+            .init(key: "key", operation: .like, value: "some%")
         ]
     }
 }
@@ -231,7 +232,8 @@ extension QueryStatementTests {
             "key < 1",
             "key <= 1",
             "key IN (1, 2, 3)",
-            "key NOT IN (1, 2, 3)"
+            "key NOT IN (1, 2, 3)",
+            "key LIKE 'some%'"
         ])
     }
     
@@ -341,7 +343,8 @@ extension QueryExpression.Condition.Operator: Equatable {
         case (.equal, .equal),
              (.notEqual, .notEqual),
              (.in, .in),
-             (.notIn, .notIn): return true
+             (.notIn, .notIn),
+             (.like, .like): return true
         
         case let (.greaterThan(eq1), .greaterThan(eq2)): return eq1 == eq2
         case let (.lessThan(eq1), .lessThan(eq2)): return eq1 == eq2
