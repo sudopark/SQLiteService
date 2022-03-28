@@ -146,11 +146,12 @@ extension SQLiteService {
 
 extension SQLiteService {
     
-    public func migrate(upto version: Int32,
-                        steps: @escaping (Int32, DataBase) throws -> Void,
-                        finalized: ((Int32, DataBase) -> Void)? = nil,
-                        completed: @escaping (Result<Int32, Error>) -> Void) {
-        
+    public func migrate(
+        upto version: Int32,
+        steps: @escaping (Int32, DataBase) throws -> Void,
+        finalized: ((Int32, DataBase) -> Void)? = nil,
+        completed: @escaping (Result<Int32, Error>
+    ) -> Void) {
         
         self.accessBlockGroup.enter()
         self.migrationQueue.async { [weak self] in
