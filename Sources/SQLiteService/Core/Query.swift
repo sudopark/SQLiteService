@@ -8,7 +8,7 @@
 import Foundation
 
 
-public protocol Query {
+public protocol Query: Sendable {
     
     @discardableResult
     func `where`(_ conditions: QueryExpression.Condition) -> Self

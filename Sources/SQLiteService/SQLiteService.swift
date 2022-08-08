@@ -21,7 +21,7 @@ private extension DispatchQueue {
 }
 
 
-public class SQLiteService {
+public final class SQLiteService: @unchecked Sendable {
 
     private let dbConnection: Connection & DataBase
     private let serialAccessQueue: DispatchQueue

@@ -11,7 +11,7 @@ import Foundation
 @available(iOS 13.0.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
 public extension SQLiteService {
     
-    struct Concurrency {
+    struct Concurrency: Sendable {
         private let sqlteService: SQLiteService
         
         init(_ service: SQLiteService) {

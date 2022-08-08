@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - QueryBuilder
 
-public struct QueryBuilder {
+public struct QueryBuilder: @unchecked Sendable {
     
     var conditions: QueryExpression.ConditionSet = .empty
     var ascendings: [ColumnName] = []
@@ -74,7 +74,7 @@ extension QueryBuilder {
 
 // MARK: - QueryBuilable
 
-public protocol QueryBuilable {
+public protocol QueryBuilable: Sendable {
     
     var builder: QueryBuilder { get set }
 }

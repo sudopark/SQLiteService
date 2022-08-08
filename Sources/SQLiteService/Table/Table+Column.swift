@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - ColumnDataAttribute
 
-public enum ColumnDataAttribute {
+public enum ColumnDataAttribute: Sendable {
     
     case primaryKey(autoIncrement: Bool)
     case notNull
@@ -85,7 +85,7 @@ public enum ColumnDataType {
 
 // MARK: - TableColumn
 
-public protocol TableColumn: RawRepresentable, CaseIterable where RawValue == String {
+public protocol TableColumn: Sendable, RawRepresentable, CaseIterable where RawValue == String {
     
     var dataType: ColumnDataType { get }
 }

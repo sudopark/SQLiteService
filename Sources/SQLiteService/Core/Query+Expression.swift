@@ -34,7 +34,7 @@ extension QueryExpression {
 
 extension QueryExpression {
     
-    public struct Condition {
+    public struct Condition: Sendable {
         
         enum Operator {
             case isNull
@@ -58,7 +58,7 @@ extension QueryExpression {
         let value: ScalarType?
     }
     
-    public indirect enum ConditionSet {
+    public indirect enum ConditionSet: Sendable {
         case empty
         case single(_ condition: Condition)
         case and(_ left: ConditionSet, _ right: ConditionSet, capsuled: Bool)

@@ -11,7 +11,7 @@ import SQLite3
 
 // MARK: - DataBase
 
-public protocol DataBase {
+public protocol DataBase: Sendable {
     
     func userVersion() throws -> Int32
     
@@ -86,7 +86,7 @@ extension DataBase {
 
 // MARK: - Connection
 
-public protocol Connection {
+public protocol Connection: Sendable {
     
     func open(path: String) throws
     
@@ -96,7 +96,7 @@ public protocol Connection {
 
 // MARK: - SQLiteDataBase
 
-public class SQLiteDataBase: Connection, DataBase {
+public final class SQLiteDataBase: Connection, DataBase, @unchecked Sendable {
     
     private var dbPointer: OpaquePointer?
     

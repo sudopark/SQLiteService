@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - ScalarType
 
-public protocol ScalarType { }
+public protocol ScalarType: Sendable { }
 
 extension Bool: ScalarType {
     

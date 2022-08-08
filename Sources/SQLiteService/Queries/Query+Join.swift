@@ -10,9 +10,9 @@ import Foundation
 
 // MARK: - JoinExpression
 
-enum JoinExpression {
+enum JoinExpression: Sendable {
     
-    enum Method: String {
+    enum Method: String, Sendable {
         case inner = "INNER"
         case outer = "LEFT OUTER"
         case cross = "CROSS"

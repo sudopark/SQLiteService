@@ -11,7 +11,7 @@ import SQLite3
 
 // MARK: - Table
 
-public protocol Table {
+public protocol Table: Sendable {
     
     associatedtype EntityType: RowValueType
     associatedtype ColumnType: TableColumn
