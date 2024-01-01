@@ -135,7 +135,6 @@ extension SQLiteDatabaseTests {
     func testDatabase_insertModels() {
         // given
         self.openDataBase()
-        try? self.database.createTableOrNot(self.table)
         var inserted: Bool = false
         
         // when

@@ -239,31 +239,39 @@ extension SQLiteDataBase {
     
     public func loadValue<T: Table, S: ScalarType>(_ query: SelectQuery<T>) throws -> S? {
         
+        try self.createTableOrNot(T.self)
         return try iterateDeserialize(query: query, deserialize: { $0.next() }).first
     }
     
     public func load<T: Table, R: RowValueType>(_ query: SelectQuery<T>) throws -> [R] {
         
+        try self.createTableOrNot(T.self)
         return try iterateDeserialize(query: query, deserialize: R.init)
     }
     
     public func load<T: Table>(_ table: T.Type, query: SelectQuery<T>) throws -> [T.EntityType] {
         
+        try self.createTableOrNot(T.self)
         return try iterateDeserialize(query: query, deserialize: T.EntityType.init)
     }
     
     public func load<T: Table, V>(_ query: SelectQuery<T>,
                                   mapping: (CursorIterator) throws -> V) throws -> [V] {
+        
+        try self.createTableOrNot(T.self)
         return try iterateDeserialize(query: query, deserialize: mapping)
     }
     
     public func load<T: Table, R: RowValueType>(_ query: JoinQuery<T>) throws -> [R] {
         
+        try self.createTableOrNot(T.self)
         return try iterateDeserialize(query: query, deserialize: R.init)
     }
     
     public func load<T: Table, V>(_ query: JoinQuery<T>,
                                   mapping: (CursorIterator) throws -> V) throws -> [V] {
+        
+        try self.createTableOrNot(T.self)
         return try iterateDeserialize(query: query, deserialize: mapping)
     }
     
@@ -301,6 +309,8 @@ extension SQLiteDataBase {
     }
     
     public func update<T>(_ table: T.Type, query: UpdateQuery<T>) throws where T : Table {
+        
+        try self.createTableOrNot(table)
         
         let stmt = try prepare(statement: query.asStatement())
         
