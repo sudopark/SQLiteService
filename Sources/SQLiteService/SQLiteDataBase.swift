@@ -17,6 +17,10 @@ public protocol DataBase: Sendable {
     
     func updateUserVersion(_ newValue: Int32) throws
     
+    func journalMode() throws -> String
+    
+    func updateJournalMode(_ mode: String) throws
+    
     func createTableOrNot<T: Table>(_ table: T.Type) throws
     
     func dropTable<T: Table>(_ table: T.Type) throws
@@ -188,6 +192,33 @@ extension SQLiteDataBase {
         let stmtText = "PRAGMA user_version = \(newValue);"
         let updateResult = sqlite3_exec(dbPointer, stmtText, nil, nil, nil)
         guard updateResult == SQLITE_OK else {
+            throw SQLiteErrors.execute(errorMessage())
+        }
+    }
+    
+    public func journalMode() throws -> String {
+        let stmtText = "PRAGMA journal_mode;"
+        var statement: OpaquePointer?
+        
+        defer {
+            sqlite3_finalize(statement)
+        }
+        
+        statement = try prepare(statement: stmtText)
+        
+        var mode: String = "Unknown"
+        if sqlite3_step(statement) == SQLITE_ROW,
+           let pointer = sqlite3_column_text(statement, 0){
+            mode = String(cString: pointer)
+        }
+        return mode
+    }
+    
+    public func updateJournalMode(_ mode: String) throws {
+        let stmtText = "PRAGMA journal_mode = \(mode);"
+        let updateResult = sqlite3_exec(dbPointer, stmtText, nil, nil, nil)
+        guard updateResult == SQLITE_OK
+        else {
             throw SQLiteErrors.execute(errorMessage())
         }
     }

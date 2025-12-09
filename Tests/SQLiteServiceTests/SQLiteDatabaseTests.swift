@@ -84,6 +84,20 @@ extension SQLiteDatabaseTests {
         XCTAssertNotNil(closeError)
     }
     
+    func testDatabase_updateJournalMode() throws {
+        // given
+        self.openDataBase()
+        
+        // when
+        let modeBeforeUpdate = try self.database.journalMode()
+        try self.database.updateJournalMode("wal")
+        let modeAfterUpdate = try self.database.journalMode()
+        
+        // then
+        XCTAssertEqual(modeBeforeUpdate, "delete")
+        XCTAssertEqual(modeAfterUpdate, "wal")
+    }
+    
     private func openDataBase() {
         try? self.database.open(path: self.dbPath)
     }
