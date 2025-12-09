@@ -12,7 +12,7 @@ import SQLiteService
 
 
 
-extension SQLiteService: ReactiveCompatible { }
+extension SQLiteService: @retroactive ReactiveCompatible { }
 
 
 extension Reactive where Base == SQLiteService {

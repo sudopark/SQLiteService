@@ -92,7 +92,7 @@ extension DataBase {
 
 public protocol Connection: Sendable {
     
-    func open(path: String) throws
+    func open(path: String, isReadOnly: Bool) throws
     
     func close() throws
 }
@@ -152,12 +152,19 @@ public final class SQLiteDataBase: Connection, DataBase, @unchecked Sendable {
 
 extension SQLiteDataBase {
     
-    public func open(path: String) throws {
-        
+    public func open(path: String, isReadOnly: Bool) throws {
         var newConnection: OpaquePointer?
         
-        guard sqlite3_open(path, &newConnection) == SQLITE_OK else {
-            throw SQLiteErrors.open(self.errorMessage(newConnection))
+        if isReadOnly {
+            guard sqlite3_open_v2(path, &newConnection, SQLITE_OPEN_READONLY, nil) == SQLITE_OK
+            else {
+                throw SQLiteErrors.open(self.errorMessage(newConnection))
+            }
+        } else {
+            guard sqlite3_open(path, &newConnection) == SQLITE_OK
+            else {
+                throw SQLiteErrors.open(self.errorMessage(newConnection))
+            }
         }
         
         self.dbPointer = newConnection

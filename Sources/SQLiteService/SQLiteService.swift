@@ -28,15 +28,20 @@ public final class SQLiteService: @unchecked Sendable {
     private let migrationQueue: DispatchQueue
     private let accessBlockGroup = DispatchGroup()
     
+    let openWithReadOnly: Bool
     private static let queueKey = DispatchSpecificKey<Int>()
     private lazy var serialQueueContext: Int = unsafeBitCast(self, to: Int.self)
     
-    public init(dbConnection: Connection & DataBase = SQLiteDataBase(),
-                accessQueue: DispatchQueue? = nil,
-                migrationQueue: DispatchQueue? = nil) {
+    public init(
+        dbConnection: Connection & DataBase = SQLiteDataBase(),
+        accessQueue: DispatchQueue? = nil,
+        migrationQueue: DispatchQueue? = nil,
+        openWithReadOnly: Bool = false
+    ) {
         self.dbConnection = dbConnection
         self.serialAccessQueue = accessQueue ?? .defaultSerialAccessQueue
         self.migrationQueue = migrationQueue ?? .defaultMigrationQueue
+        self.openWithReadOnly = openWithReadOnly
         self.serialAccessQueue.setSpecific(key: Self.queueKey, value: serialQueueContext)
     }
     
@@ -46,7 +51,7 @@ public final class SQLiteService: @unchecked Sendable {
     
     public func open(path: String) -> Result<Void, Error> {
         do {
-            try self.dbConnection.open(path: path)
+            try self.dbConnection.open(path: path, isReadOnly: self.openWithReadOnly)
             return .success(())
         } catch let error {
             return .failure(error)
@@ -55,11 +60,13 @@ public final class SQLiteService: @unchecked Sendable {
     
     public func open(path: String, _ completed: @escaping (Result<Void, Error>) -> Void) {
         
+        let isReadOnly = self.openWithReadOnly
+        
         self.waitForMigrationFinishIfNeed { [weak self] in
             self?.serialAccessQueue.async {
                 guard let self = self else { return }
                 do {
-                    try self.dbConnection.open(path: path)
+                    try self.dbConnection.open(path: path, isReadOnly: isReadOnly)
                     completed(.success(()))
                 } catch let error {
                     completed(.failure(error))

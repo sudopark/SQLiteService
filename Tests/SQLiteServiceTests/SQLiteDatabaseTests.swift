@@ -46,9 +46,39 @@ extension SQLiteDatabaseTests {
         
         // when
         do {
-            try self.database.open(path: dbPath)
+            try self.database.open(path: dbPath, isReadOnly: false)
             isOpened = true
         } catch {}
+        
+        // then
+        XCTAssertEqual(isOpened, true)
+    }
+    
+    func testDatabase_whenEmptyFileAndopenWithReadOnlyOption_openFail() {
+        // given
+        var isOpened = false
+        
+        // when
+        do {
+            try self.database.open(path: dbPath, isReadOnly: true)
+            isOpened = true
+        } catch { }
+        
+        // then
+        XCTAssertEqual(isOpened, false)
+    }
+    
+    func testDatabase_openWithReadOnlyOption() {
+        // given
+        var isOpened = false
+        
+        // when
+        do {
+            try self.database.open(path: dbPath, isReadOnly: false)
+            try self.database.close()
+            try self.database.open(path: dbPath, isReadOnly: true)
+            isOpened = true
+        } catch { }
         
         // then
         XCTAssertEqual(isOpened, true)
@@ -60,7 +90,7 @@ extension SQLiteDatabaseTests {
         
         // when
         do {
-            try self.database.open(path: self.dbPath)
+            try self.database.open(path: self.dbPath, isReadOnly: false)
             try self.database.close()
             isClosed = true
         } catch {}
@@ -99,7 +129,7 @@ extension SQLiteDatabaseTests {
     }
     
     private func openDataBase() {
-        try? self.database.open(path: self.dbPath)
+        try? self.database.open(path: self.dbPath, isReadOnly: false)
     }
     
     // create table
