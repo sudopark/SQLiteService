@@ -48,6 +48,8 @@ public protocol DataBase: Sendable {
     func delete<T: Table>(_ table: T.Type, query: DeleteQuery<T>) throws
     
     func executeTransaction(_ statements: String) throws
+    
+    func execute(_ statement: String) throws
 }
 
 extension DataBase {
@@ -140,6 +142,17 @@ public final class SQLiteDataBase: Connection, DataBase, @unchecked Sendable {
         let _ = sqlite3_exec(dbPointer, "END TRANSACTION", nil, nil, nil)
         
         guard result == SQLITE_OK else {
+            throw SQLiteErrors.transation(errorMessage())
+        }
+    }
+    
+    public func execute(_ statement: String) throws {
+        guard statement.isEmpty == false else { return }
+        
+        
+        let result = sqlite3_exec(dbPointer, statement, nil, nil, nil)
+        guard result == SQLITE_OK
+        else {
             throw SQLiteErrors.transation(errorMessage())
         }
     }

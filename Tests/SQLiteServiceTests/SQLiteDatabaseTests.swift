@@ -15,6 +15,7 @@ class SQLiteDatabaseTests: XCTestCase {
     var dbPath: String!
     var table: Dummies.TypesTable.Type!
     var database: SQLiteDataBase!
+    var readOnlyDB: SQLiteDataBase!
     
     override func setUpWithError() throws {
         
@@ -25,12 +26,15 @@ class SQLiteDatabaseTests: XCTestCase {
                         .path
         self.dbPath = path
         self.database = .init()
+        self.readOnlyDB = .init()
     }
     
     override func tearDownWithError() throws {
         try? self.database.close()
+        try? self.readOnlyDB.close()
         try? FileManager.default.removeItem(atPath: self.dbPath)
         self.database = nil
+        self.readOnlyDB = nil
         self.table = nil
         self.dbPath = nil
     }
@@ -354,5 +358,25 @@ extension SQLiteDatabaseTests {
         
         // then
         XCTAssertEqual(models?.map { $0.text }, ["abc", "ab12"])
+    }
+    
+    func testDatabase_checkpoint() throws {
+        // given
+        try self.database.open(path: self.dbPath, isReadOnly: false)
+        try self.database.updateJournalMode("wal")
+        try self.readOnlyDB.open(path: self.dbPath, isReadOnly: true)
+        
+        // when
+        try self.database.insert(self.table, entities: self.dummyEntities, shouldReplace: true)
+        let sizeBefore = try FileManager.default.attributesOfItem(atPath: dbPath)[.size] as! UInt64
+        try self.database.execute("PRAGMA wal_checkpoint(PASSIVE);")
+        
+        // then
+        let query = self.table.selectAll()
+        let models = try self.readOnlyDB.load(self.table, query: query)
+        XCTAssertEqual(models.count, self.dummyEntities.count)
+        
+        let sizeAfter = try FileManager.default.attributesOfItem(atPath: dbPath)[.size] as! UInt64
+        XCTAssertGreaterThan(sizeAfter, sizeBefore)
     }
 }
