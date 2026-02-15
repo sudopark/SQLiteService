@@ -73,7 +73,7 @@ extension Table {
     }
     
     public static var dropStatement: String {
-        return "DROP TABLE IF EXISTS \(Self.tableName)"
+        return "DROP TABLE IF EXISTS \(Self.tableName);"
     }
     
     public static func renameStatement(from oldName: String) -> String {
