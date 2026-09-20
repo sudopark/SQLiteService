@@ -8,6 +8,7 @@
 import XCTest
 
 import SQLiteService
+import SQLiteServiceMacros
 
 
 class UsageExampleTests: XCTestCase {
@@ -326,5 +327,52 @@ extension UsageExampleTests {
         let petOwnerAndPets = try? result.get()
         print("pet owner and pet: \(petOwnerAndPets)")
         XCTAssertEqual(petOwnerAndPets?.count, 2)
+    }
+}
+
+
+// MARK: - define table with @Table macro
+
+/**
+ The macro generates Columns, Entity, tableName and scalar(_:for:) from this single declaration.
+ The SQLite data type comes from the Swift type and the attributes only from @Column,
+ so an optional property is not NOT NULL by itself.
+ */
+@Table("MacroUsers")
+struct MacroUserTable {
+
+    @Column(.primaryKey(autoIncrement: false)) var uid: String
+    @Column(.notNull) var name: String
+    var age: Int?
+    @Column(.unique, .notNull) var email: String
+    var phone: String?
+    @Column(name: "intro") var introduction: String?
+}
+
+extension MacroUserTable.Entity {
+
+    init(_ user: User) {
+        self.init(uid: user.uid, name: user.name, age: user.age,
+                  email: user.email, phone: user.phone, introduction: user.introduction)
+    }
+}
+
+
+extension UsageExampleTests {
+
+    func testMacroTableUsage() {
+
+        let table = MacroUserTable.self
+        let entities = (0..<10).map { MacroUserTable.Entity(User(dummy: $0)) }
+
+        _ = self.service.open(path: self.dbPath)
+        _ = self.service.run { try $0.createTableOrNot(table) }
+        _ = self.service.run { try $0.insert(table, entities: entities) }
+
+        let query = table.selectAll { $0.uid == "uid:1" }
+        let result: Result<MacroUserTable.Entity?, Error> = self.service.run(execute: { try $0.loadOne(query) })
+        let user = try? result.get()
+        XCTAssertEqual(user?.uid, "uid:1")
+        XCTAssertEqual(user?.name, "name:1")
     }
 }
