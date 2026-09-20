@@ -4,7 +4,7 @@ It is a library for easier and type-safe use of sqlite in the apple device(ios/m
 
 
 ## Installation
-Currently, only SPM is supported.
+Currently, only SPM is supported. Swift 5.9 or later is required to build the package, the runtime deployment targets are unchanged.
 
 
 ## How to use it
@@ -212,6 +212,36 @@ struct PetTable: Table {
 
 Another requirement for tables is to indicate which property of the entity matches each column using the ```static func scalar(_ entity: Entity, for column: Columns) -> ScalarType?``` type method.
 (Actual data is stored by matching entity property values according to the order of columns following the ```CaseIterable``` protocol.)
+
+### Table with @Table macro
+
+The same table can be declared once with the ```@Table``` macro, which is provided as a separate ```SQLiteServiceMacros``` product so that consumers who do not use it never build swift-syntax.
+
+```swift
+import SQLiteServiceMacros
+
+@Table("Users")
+struct UserTable {
+
+    @Column(.primaryKey(autoIncrement: false)) var uid: String
+    @Column(.notNull) var name: String
+    var age: Int?
+    @Column(.unique, .notNull) var email: String
+    var phone: String?
+    @Column(name: "intro") var introduction: String?
+}
+```
+
+It generates the ```Table``` conformance, a ```Columns``` enum and an ```Entity``` struct from the declaration order, so the column order and the cursor read order can no longer drift apart.
+
+- The SQLite data type comes from the Swift type: ```Int``` and ```Bool``` to ```.integer```, ```String``` to ```.text```, ```Double``` and ```Float``` to ```.real```.
+- Column attributes come only from ```@Column```. An optional property is not ```NOT NULL``` by itself.
+- ```@Column(name:)``` sets the stored column name, otherwise the property name is used.
+- A table declares stored properties only. A computed property or a ```willSet``` / ```didSet``` observer is a compile error, so the entity is always inferable from the declared types alone.
+- ```Entity``` gets a memberwise init and the ```RowValueType``` cursor init. Its mutability follows the column type, not the table declaration, so writing ```let``` or ```var``` on a table property makes no difference: an optional column becomes a mutable ```var``` whose init argument defaults to ```nil``` and can be filled in after the entity is built, every other column becomes a ```let```. Conversions live in ```extension UserTable.Entity```.
+- Migration statements are still written by hand in ```extension UserTable { static func migrateStatement(for:) }```.
+
+Tables that the macro does not fit - one entity shared by several tables, for example - stay as a hand written ```Table``` conformance.
 
 ### data manipulation
 
