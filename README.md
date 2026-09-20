@@ -4,7 +4,9 @@ It is a library for easier and type-safe use of sqlite in the apple device(ios/m
 
 
 ## Installation
-Currently, only SPM is supported. Swift 5.9 or later is required to build the package, the runtime deployment targets are unchanged.
+Currently, only SPM is supported. The runtime deployment targets are unchanged.
+
+`SQLiteService` and `RxSQLiteService` build on Swift 5 as well - a Swift 5 toolchain resolves the package through `Package@swift-5.swift`, which declares those two products only. The `@Table` macro needs a macro capable manifest, so `SQLiteServiceMacros` is available on Swift 6 and later.
 
 
 ## How to use it
@@ -215,7 +217,7 @@ Another requirement for tables is to indicate which property of the entity match
 
 ### Table with @Table macro
 
-The same table can be declared once with the ```@Table``` macro, which is provided as a separate ```SQLiteServiceMacros``` product so that consumers who do not use it never build swift-syntax.
+The same table can be declared once with the ```@Table``` macro. It ships as a separate ```SQLiteServiceMacros``` product, so consumers who do not use it never build swift-syntax, and it requires Swift 6.
 
 ```swift
 import SQLiteServiceMacros
