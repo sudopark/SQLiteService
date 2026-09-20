@@ -278,3 +278,94 @@ private extension SQLiteServiceTests_migration {
         }
     }
 }
+
+
+extension SQLiteServiceTests_migration {
+    
+    func testService_migrationNotOverlapWithQueuedAccess() {
+        // given
+        let expect = expectation(description: "migration not overlap with already queued access")
+        expect.expectedFulfillmentCount = 21
+        self.waitOpenDatabase()
+        let probe = ExclusiveSectionProbe()
+        
+        // when
+        (0..<20).forEach { _ in
+            self.service.run(execute: { database -> Void in
+                probe.enter()
+                _ = try? database.userVersion()
+                probe.leave()
+            }, completed: { _ in expect.fulfill() })
+        }
+        self.service.migrate(upto: 1, steps: { _, _ in
+            probe.enter()
+            Thread.sleep(forTimeInterval: 0.05)
+            probe.leave()
+        }) { _ in
+            expect.fulfill()
+        }
+        self.wait(for: [expect], timeout: self.timeout)
+        
+        // then
+        XCTAssertEqual(probe.isOverlapped, false)
+    }
+    
+    func testService_whenMigrateRightAfterAsyncOpen_migrateAfterOpened() {
+        // given
+        let expect = expectation(description: "migrate runs after async open finished")
+        
+        // when
+        self.service.open(path: self.dbPath) { _ in }
+        var migratedVersion: Int32?
+        self.service.migrate(upto: 1, steps: self.migrationSteps) { result in
+            migratedVersion = result.unwrap()
+            expect.fulfill()
+        }
+        self.wait(for: [expect], timeout: self.timeout)
+        
+        // then
+        XCTAssertEqual(migratedVersion, 1)
+    }
+    
+    func testService_whenRunSyncInsideMigrationStep_notDeadlock() {
+        // given
+        let expect = expectation(description: "sync run inside migration step not deadlock")
+        self.waitOpenDatabase()
+        var versionInStep: Int32?
+        
+        // when
+        self.service.migrate(upto: 1, steps: { [weak self] _, _ in
+            versionInStep = self?.service.run { try $0.userVersion() }.unwrap()
+        }) { _ in
+            expect.fulfill()
+        }
+        self.wait(for: [expect], timeout: self.timeout)
+        
+        // then
+        XCTAssertEqual(versionInStep, 0)
+    }
+}
+
+
+private final class ExclusiveSectionProbe: @unchecked Sendable {
+    
+    private let lock = NSLock()
+    private var runningCount: Int = 0
+    private var overlapped: Bool = false
+    
+    var isOverlapped: Bool {
+        self.lock.lock(); defer { self.lock.unlock() }
+        return self.overlapped
+    }
+    
+    func enter() {
+        self.lock.lock(); defer { self.lock.unlock() }
+        self.runningCount += 1
+        self.overlapped = self.overlapped || self.runningCount > 1
+    }
+    
+    func leave() {
+        self.lock.lock(); defer { self.lock.unlock() }
+        self.runningCount -= 1
+    }
+}

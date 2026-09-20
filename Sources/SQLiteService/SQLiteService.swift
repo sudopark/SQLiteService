@@ -14,10 +14,6 @@ private extension DispatchQueue {
     static var defaultSerialAccessQueue: DispatchQueue {
         return .init(label: "db_access_queue:\(UUID().uuidString)", qos: .utility)
     }
-    
-    static var defaultMigrationQueue: DispatchQueue {
-        return .init(label: "db_migration_queue:\(UUID().uuidString)", qos: .utility)
-    }
 }
 
 
@@ -25,8 +21,6 @@ public final class SQLiteService: @unchecked Sendable {
 
     private let dbConnection: Connection & DataBase
     private let serialAccessQueue: DispatchQueue
-    private let migrationQueue: DispatchQueue
-    private let accessBlockGroup = DispatchGroup()
     
     let openWithReadOnly: Bool
     private static let queueKey = DispatchSpecificKey<Int>()
@@ -35,26 +29,38 @@ public final class SQLiteService: @unchecked Sendable {
     public init(
         dbConnection: Connection & DataBase = SQLiteDataBase(),
         accessQueue: DispatchQueue? = nil,
-        migrationQueue: DispatchQueue? = nil,
         openWithReadOnly: Bool = false
     ) {
         self.dbConnection = dbConnection
         self.serialAccessQueue = accessQueue ?? .defaultSerialAccessQueue
-        self.migrationQueue = migrationQueue ?? .defaultMigrationQueue
         self.openWithReadOnly = openWithReadOnly
         self.serialAccessQueue.setSpecific(key: Self.queueKey, value: serialQueueContext)
     }
     
-    private func waitForMigrationFinishIfNeed(then action: @escaping () -> Void) {
-        self.accessBlockGroup.notify(queue: self.serialAccessQueue, execute: action)
+    @available(*, deprecated, message: "migrationQueue is ignored. migration runs on the access queue.")
+    public convenience init(
+        dbConnection: Connection & DataBase = SQLiteDataBase(),
+        accessQueue: DispatchQueue? = nil,
+        migrationQueue: DispatchQueue?,
+        openWithReadOnly: Bool = false
+    ) {
+        self.init(dbConnection: dbConnection, accessQueue: accessQueue, openWithReadOnly: openWithReadOnly)
+    }
+    
+    private func runOnAccessQueue<T>(_ action: () -> T) -> T {
+        let isRunningOnSerialAccessQueue = DispatchQueue.getSpecific(key: Self.queueKey) == self.serialQueueContext
+        return isRunningOnSerialAccessQueue ? action() : self.serialAccessQueue.sync(execute: action)
     }
     
     public func open(path: String) -> Result<Void, Error> {
-        do {
-            try self.dbConnection.open(path: path, isReadOnly: self.openWithReadOnly)
-            return .success(())
-        } catch let error {
-            return .failure(error)
+        let isReadOnly = self.openWithReadOnly
+        return self.runOnAccessQueue {
+            do {
+                try self.dbConnection.open(path: path, isReadOnly: isReadOnly)
+                return .success(())
+            } catch let error {
+                return .failure(error)
+            }
         }
     }
     
@@ -62,41 +68,38 @@ public final class SQLiteService: @unchecked Sendable {
         
         let isReadOnly = self.openWithReadOnly
         
-        self.waitForMigrationFinishIfNeed { [weak self] in
-            self?.serialAccessQueue.async {
-                guard let self = self else { return }
-                do {
-                    try self.dbConnection.open(path: path, isReadOnly: isReadOnly)
-                    completed(.success(()))
-                } catch let error {
-                    completed(.failure(error))
-                }
+        self.serialAccessQueue.async { [weak self] in
+            guard let self = self else { return }
+            do {
+                try self.dbConnection.open(path: path, isReadOnly: isReadOnly)
+                completed(.success(()))
+            } catch let error {
+                completed(.failure(error))
             }
         }
     }
     
     @discardableResult
     public func close() -> Result<Void, Error> {
-        do {
-            try self.dbConnection.close()
-            return .success(())
-            
-        } catch let error {
-            return .failure(error)
+        return self.runOnAccessQueue {
+            do {
+                try self.dbConnection.close()
+                return .success(())
+            } catch let error {
+                return .failure(error)
+            }
         }
     }
     
     public func close(_ completed: @escaping (Result<Void, Error>) -> Void) {
         
-        self.waitForMigrationFinishIfNeed { [weak self] in
-            self?.serialAccessQueue.async { [weak self] in
-                guard let self = self else { return }
-                do {
-                    try self.dbConnection.close()
-                    completed(.success(()))
-                } catch let error {
-                    completed(.failure(error))
-                }
+        self.serialAccessQueue.async { [weak self] in
+            guard let self = self else { return }
+            do {
+                try self.dbConnection.close()
+                completed(.success(()))
+            } catch let error {
+                completed(.failure(error))
             }
         }
     }
@@ -107,7 +110,7 @@ extension SQLiteService {
     @discardableResult
     public func run<T>(execute: (DataBase) throws -> T) -> Result<T, Error> {
         
-        func runEexecute() -> Result<T, Error> {
+        return self.runOnAccessQueue {
             do {
                 let result = try execute(self.dbConnection)
                 return .success(result)
@@ -115,11 +118,6 @@ extension SQLiteService {
                 return .failure(error)
             }
         }
-        
-        _ = self.accessBlockGroup.wait(wallTimeout: .distantFuture)
-
-        let isRunningOnSerialAccessQueue = DispatchQueue.getSpecific(key: Self.queueKey) == self.serialQueueContext
-        return isRunningOnSerialAccessQueue ? runEexecute() : self.serialAccessQueue.sync(execute: runEexecute)
     }
     
     @discardableResult
@@ -130,15 +128,13 @@ extension SQLiteService {
     public func run<T>(execute: @escaping (DataBase) throws -> T,
                        completed: @escaping (Result<T, Error>) -> Void) {
         
-        self.waitForMigrationFinishIfNeed { [weak self] in
-            self?.serialAccessQueue.async {
-                guard let connection = self?.dbConnection else { return }
-                do {
-                    let result = try execute(connection)
-                    completed(.success(result))
-                } catch let error {
-                    completed(.failure(error))
-                }
+        self.serialAccessQueue.async { [weak self] in
+            guard let connection = self?.dbConnection else { return }
+            do {
+                let result = try execute(connection)
+                completed(.success(result))
+            } catch let error {
+                completed(.failure(error))
             }
         }
     }
@@ -160,8 +156,7 @@ extension SQLiteService {
         completed: @escaping (Result<Int32, Error>
     ) -> Void) {
         
-        self.accessBlockGroup.enter()
-        self.migrationQueue.async { [weak self] in
+        self.serialAccessQueue.async { [weak self] in
             guard let self = self else { return }
             
             do {
@@ -170,12 +165,9 @@ extension SQLiteService {
                                                             upto: version,
                                                             migrationJob: steps,
                                                             finalizingJob: finalized)
-                self.accessBlockGroup.leave()
                 completed(.success(newVersion))
                 
             } catch let error {
-                self.accessBlockGroup.leave()
-                print("errror: \(error)")
                 completed(.failure(error))
             }
         }
