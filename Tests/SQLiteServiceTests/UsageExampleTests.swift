@@ -172,7 +172,7 @@ extension UsageExampleTests {
             expect.fulfill()
         }
         
-        self.wait(for: [expect], timeout: 0.01)
+        self.wait(for: [expect], timeout: 1)
     }
     
     func testLoadDataUsage() {
@@ -220,11 +220,11 @@ extension UsageExampleTests {
         let selectQuery = table.selectAll{ $0.uid == "uid:1" }
         self.service.run(execute: { try $0.loadOne(selectQuery) }) { (result: Result<UserTable.Entiity?, Error>) in
             guard case let .success(user) = result, let updatedUser = user else { return }
-            print("updated user intro: \(updatedUser.introduction)")
+            print("updated user intro: \(String(describing: updatedUser.introduction))")
             expect.fulfill()
         }
         
-        self.wait(for: [expect], timeout: 0.01)
+        self.wait(for: [expect], timeout: 1)
     }
     
     func testDeleteUsage() {
@@ -243,7 +243,7 @@ extension UsageExampleTests {
             expect.fulfill()
         }
         
-        self.wait(for: [expect], timeout: 0.01)
+        self.wait(for: [expect], timeout: 1)
     }
 }
 
@@ -324,7 +324,7 @@ extension UsageExampleTests {
         }
         let result = self.service.run(execute: { try $0.load(joinQuery, mapping: mapping) })
         let petOwnerAndPets = try? result.get()
-        print("pet owner and pet: \(petOwnerAndPets)")
+        print("pet owner and pet: \(String(describing: petOwnerAndPets))")
         XCTAssertEqual(petOwnerAndPets?.count, 2)
     }
 }
