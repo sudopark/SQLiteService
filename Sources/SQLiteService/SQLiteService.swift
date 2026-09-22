@@ -64,7 +64,7 @@ public final class SQLiteService: @unchecked Sendable {
         }
     }
     
-    public func open(path: String, _ completed: @escaping (Result<Void, Error>) -> Void) {
+    public func open(path: String, _ completed: @Sendable @escaping (Result<Void, Error>) -> Void) {
         
         let isReadOnly = self.openWithReadOnly
         
@@ -91,7 +91,7 @@ public final class SQLiteService: @unchecked Sendable {
         }
     }
     
-    public func close(_ completed: @escaping (Result<Void, Error>) -> Void) {
+    public func close(_ completed: @Sendable @escaping (Result<Void, Error>) -> Void) {
         
         self.serialAccessQueue.async { [weak self] in
             guard let self = self else { return }
@@ -125,8 +125,8 @@ extension SQLiteService {
         return self.run(execute: execute)
     }
 
-    public func run<T>(execute: @escaping (DataBase) throws -> T,
-                       completed: @escaping (Result<T, Error>) -> Void) {
+    public func run<T: Sendable>(execute: @Sendable @escaping (DataBase) throws -> T,
+                       completed: @Sendable @escaping (Result<T, Error>) -> Void) {
         
         self.serialAccessQueue.async { [weak self] in
             guard let connection = self?.dbConnection else { return }
@@ -139,9 +139,9 @@ extension SQLiteService {
         }
     }
     
-    public func run<T>(_ type: T.Type,
-                       execute: @escaping (DataBase) throws -> T,
-                       completed: @escaping (Result<T, Error>) -> Void) {
+    public func run<T: Sendable>(_ type: T.Type,
+                       execute: @Sendable @escaping (DataBase) throws -> T,
+                       completed: @Sendable @escaping (Result<T, Error>) -> Void) {
         self.run(execute: execute, completed: completed)
     }
 }
@@ -151,9 +151,9 @@ extension SQLiteService {
     
     public func migrate(
         upto version: Int32,
-        steps: @escaping (Int32, DataBase) throws -> Void,
-        finalized: ((Int32, DataBase) -> Void)? = nil,
-        completed: @escaping (Result<Int32, Error>
+        steps: @Sendable @escaping (Int32, DataBase) throws -> Void,
+        finalized: (@Sendable (Int32, DataBase) -> Void)? = nil,
+        completed: @Sendable @escaping (Result<Int32, Error>
     ) -> Void) {
         
         self.serialAccessQueue.async { [weak self] in
@@ -175,8 +175,8 @@ extension SQLiteService {
     
     private func runMigrationSteps(currentVersion: Int32,
                                    upto targetVersion: Int32,
-                                   migrationJob: @escaping (Int32, DataBase) throws -> Void,
-                                   finalizingJob: ((Int32, DataBase) -> Void)?) throws -> Int32 {
+                                   migrationJob: @Sendable @escaping (Int32, DataBase) throws -> Void,
+                                   finalizingJob: (@Sendable (Int32, DataBase) -> Void)?) throws -> Int32 {
         
         guard currentVersion < targetVersion else {
             finalizingJob?(currentVersion, self.dbConnection)

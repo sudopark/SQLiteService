@@ -55,7 +55,7 @@ extension SQLiteService.Concurrency {
 @available(iOS 13.0.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
 extension SQLiteService.Concurrency {
     
-    public func run<T>(execute: @escaping (DataBase) throws -> T) async throws -> T {
+    public func run<T: Sendable>(execute: @Sendable @escaping (DataBase) throws -> T) async throws -> T {
         
         return try await withCheckedThrowingContinuation { continuation in
             
@@ -65,7 +65,7 @@ extension SQLiteService.Concurrency {
         }
     }
     
-    public func run<T>(_ type: T.Type, execute: @escaping (DataBase) throws -> T) async throws -> T {
+    public func run<T: Sendable>(_ type: T.Type, execute: @Sendable @escaping (DataBase) throws -> T) async throws -> T {
         
         return try await withCheckedThrowingContinuation { continuation in
             
@@ -84,8 +84,8 @@ extension SQLiteService.Concurrency {
     
     public func migrate(
         upto version: Int32,
-        steps: @escaping (Int32, DataBase) throws -> Void,
-        finalized: ((Int32, DataBase) -> Void)? = nil
+        steps: @Sendable @escaping (Int32, DataBase) throws -> Void,
+        finalized: (@Sendable (Int32, DataBase) -> Void)? = nil
     ) async throws -> Int32 {
         
         return try await withCheckedThrowingContinuation { continuation in

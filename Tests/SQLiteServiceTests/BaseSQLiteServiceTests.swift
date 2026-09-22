@@ -10,7 +10,7 @@ import XCTest
 @testable import SQLiteService
 
 
-class BaseSQLiteServiceTests: XCTestCase {
+class BaseSQLiteServiceTests: XCTestCase, @unchecked Sendable {
     
     var dbPath: String!
     var table: UserTable.Type!
@@ -111,7 +111,7 @@ extension BaseSQLiteServiceTests {
             }
         }
         
-        static var testRenameColumn: Bool = false
+        nonisolated(unsafe) static var testRenameColumn: Bool = false
         
         static func migrateStatement(for version: Int32) -> String? {
             switch version {

@@ -10,15 +10,15 @@ import XCTest
 @testable import SQLiteService
 
 
-class SQLiteServiceTests_migration: BaseSQLiteServiceTests { }
+class SQLiteServiceTests_migration: BaseSQLiteServiceTests, @unchecked Sendable { }
 
 
 extension SQLiteServiceTests_migration {
     
-    func migrationSteps(_ version: Int32, _ database: DataBase) throws {
+    static func migrationSteps(_ version: Int32, _ database: DataBase) throws {
         switch version {
         case 0, 1:
-            try? database.migrate(table, version: version)
+            try? database.migrate(UserTable.self, version: version)
 
         default: break
         }
@@ -33,7 +33,7 @@ extension SQLiteServiceTests_migration {
         _ = self.service.run { try $0.insert(UserTableV0.self, entities: entities) }
         
         // when
-        self.service.migrate(upto: 1, steps: self.migrationSteps) { _ in
+        self.service.migrate(upto: 1, steps: Self.migrationSteps) { _ in
             expect.fulfill()
         }
         self.wait(for: [expect], timeout: self.timeout)
@@ -60,7 +60,7 @@ extension SQLiteServiceTests_migration {
         _ = self.service.run { try $0.insert(UserTableV1.self, entities: entities) }
         
         // when
-        self.service.migrate(upto: 2, steps: self.migrationSteps(_:_:)) { _ in
+        self.service.migrate(upto: 2, steps: Self.migrationSteps(_:_:)) { _ in
             expect.fulfill()
         }
         self.wait(for: [expect], timeout: self.timeout)
@@ -82,7 +82,7 @@ extension SQLiteServiceTests_migration {
     
         // when
         self.table.testRenameColumn = true
-        self.service.migrate(upto: 3, steps: self.migrationSteps(_:_:)) { _ in
+        self.service.migrate(upto: 3, steps: Self.migrationSteps(_:_:)) { _ in
             expect.fulfill()
         }
         self.wait(for: [expect], timeout: self.timeout)
@@ -97,7 +97,7 @@ extension SQLiteServiceTests_migration {
         // given
         let expect = expectation(description: "call finalized closure if exists when after migration end")
         self.waitOpenDatabase()
-        var isFinalized = false
+        nonisolated(unsafe) var isFinalized = false
         
         // when
         self.service.migrate(upto: 3, steps: { _, _ in }, finalized: { _, _ in
@@ -141,8 +141,8 @@ extension SQLiteServiceTests_migration {
         // given
         let expect = expectation(description: "wait async access until migration end")
         expect.expectedFulfillmentCount = 2
-        var migrationEnd: TimeInterval?
-        var userLoaded: TimeInterval?
+        nonisolated(unsafe) var migrationEnd: TimeInterval?
+        nonisolated(unsafe) var userLoaded: TimeInterval?
         
         self.waitOpenDatabase()
         let entities = self.dummyUsers.map{ UserTableV0.EntityType(user: $0) }
@@ -187,7 +187,7 @@ private extension SQLiteServiceTests_migration {
             }
         }
         
-        class UserEntityV0: RowValueType {
+        struct UserEntityV0: RowValueType {
             let userID: Int
             let name: String
             let age: Int?
@@ -198,7 +198,7 @@ private extension SQLiteServiceTests_migration {
                 self.age = user.age
             }
             
-            required init(_ cursor: CursorIterator) throws {
+            init(_ cursor: CursorIterator) throws {
                 self.userID = try cursor.next().unwrap()
                 self.name = try cursor.next().unwrap()
                 self.age = cursor.next()
@@ -237,16 +237,23 @@ private extension SQLiteServiceTests_migration {
             }
         }
         
-        class UserEntityV1: UserTableV0.UserEntityV0 {
+        struct UserEntityV1: RowValueType {
+            let userID: Int
+            let name: String
+            let age: Int?
             var nickName: String?
             
-            override init(user: BaseSQLiteServiceTests.User) {
-                super.init(user: user)
+            init(user: BaseSQLiteServiceTests.User) {
+                self.userID = user.userID
+                self.name = user.name
+                self.age = user.age
                 self.nickName = user.nickName
             }
             
-            required init(_ cursor: CursorIterator) throws {
-                try super.init(cursor)
+            init(_ cursor: CursorIterator) throws {
+                self.userID = try cursor.next().unwrap()
+                self.name = try cursor.next().unwrap()
+                self.age = cursor.next()
                 self.nickName = cursor.next()
             }
         }
@@ -316,8 +323,8 @@ extension SQLiteServiceTests_migration {
         
         // when
         self.service.open(path: self.dbPath) { _ in }
-        var migratedVersion: Int32?
-        self.service.migrate(upto: 1, steps: self.migrationSteps) { result in
+        nonisolated(unsafe) var migratedVersion: Int32?
+        self.service.migrate(upto: 1, steps: Self.migrationSteps) { result in
             migratedVersion = result.unwrap()
             expect.fulfill()
         }
@@ -331,7 +338,7 @@ extension SQLiteServiceTests_migration {
         // given
         let expect = expectation(description: "sync run inside migration step not deadlock")
         self.waitOpenDatabase()
-        var versionInStep: Int32?
+        nonisolated(unsafe) var versionInStep: Int32?
         
         // when
         self.service.migrate(upto: 1, steps: { [weak self] _, _ in

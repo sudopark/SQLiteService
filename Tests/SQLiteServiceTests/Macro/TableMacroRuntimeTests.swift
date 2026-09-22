@@ -45,7 +45,7 @@ extension MacroTestTableV1 {
 }
 
 
-class TableMacroRuntimeTests: BaseSQLiteServiceTests {
+class TableMacroRuntimeTests: BaseSQLiteServiceTests, @unchecked Sendable {
 
     fileprivate var dummyUser: MacroTestTable.Entity {
         return .init(

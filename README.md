@@ -6,6 +6,8 @@ It is a library for easier and type-safe use of sqlite in the apple device(ios/m
 ## Installation
 Currently, only SPM is supported. The runtime deployment targets are unchanged.
 
+`SQLiteService` and `SQLiteServiceMacros` build in the Swift 6 language mode, so an entity crossing the access queue has to be `Sendable`: `RowValueType` inherits `Sendable` and the completion handler APIs take `@Sendable` closures. A hand written entity that is a non-final class or holds mutable state has to become a value type. `RxSQLiteService` stays in the Swift 5 language mode until RxSwift annotates its own API.
+
 `SQLiteService` and `RxSQLiteService` build on Swift 5 as well - a Swift 5 toolchain resolves the package through `Package@swift-5.swift`, which declares those two products only. The `@Table` macro needs a macro capable manifest, so `SQLiteServiceMacros` is available on Swift 6 and later.
 
 
@@ -55,7 +57,7 @@ public protocol TableColumn: RawRepresentable, CaseIterable where RawValue == St
 
 // MARK: - RowValuetype
 
-public protocol RowValueType {
+public protocol RowValueType: Sendable {
     
     init(_ cursor: CursorIterator) throws
 }
