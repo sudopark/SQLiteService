@@ -10,7 +10,7 @@ import XCTest
 @testable import SQLiteService
 
 
-class SQLiteServiceTests: BaseSQLiteServiceTests { }
+class SQLiteServiceTests: BaseSQLiteServiceTests, @unchecked Sendable { }
 
 extension SQLiteServiceTests {
     

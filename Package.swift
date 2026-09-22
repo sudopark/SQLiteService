@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -38,7 +38,11 @@ let package = Package(
             ]
         ),
         .target(name: "SQLiteServiceMacros", dependencies: ["SQLiteService", "SQLiteServiceMacrosPlugin"]),
-        .target(name: "RxSQLiteService", dependencies: ["SQLiteService", "RxSwift"]),
+        .target(
+            name: "RxSQLiteService",
+            dependencies: ["SQLiteService", "RxSwift"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         .testTarget(name: "SQLiteServiceTests", dependencies: ["SQLiteService", "SQLiteServiceMacros", "RxSQLiteService"]),
         .testTarget(
             name: "SQLiteServiceMacrosTests",
@@ -48,5 +52,5 @@ let package = Package(
             ]
         )
     ],
-    swiftLanguageVersions: [.v5]
+    swiftLanguageModes: [.v6]
 )

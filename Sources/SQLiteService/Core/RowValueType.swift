@@ -28,7 +28,7 @@ public class CursorIterator {
 
 // MARK: - RowValuetype
 
-public protocol RowValueType {
+public protocol RowValueType: Sendable {
     
     init(_ cursor: CursorIterator) throws
 }

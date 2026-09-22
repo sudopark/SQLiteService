@@ -12,7 +12,7 @@ import RxSwift
 @testable import RxSQLiteService
 
 
-class SQLiteServiceTests_Rx: BaseSQLiteServiceTests {
+class SQLiteServiceTests_Rx: BaseSQLiteServiceTests, @unchecked Sendable {
     
     var disposeBag: DisposeBag!
     

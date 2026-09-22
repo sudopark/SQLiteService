@@ -12,7 +12,7 @@ import SQLiteService
 
 
 
-extension SQLiteService: @retroactive ReactiveCompatible { }
+extension SQLiteService: ReactiveCompatible { }
 
 
 extension Reactive where Base == SQLiteService {
@@ -21,7 +21,8 @@ extension Reactive where Base == SQLiteService {
         return Single.create { [weak base] callback in
             
             guard let storage = base else { return Disposables.create() }
-            storage.open(path: path, callback)
+            nonisolated(unsafe) let callback = callback
+            storage.open(path: path) { callback($0) }
             
             return Disposables.create()
         }
@@ -32,32 +33,35 @@ extension Reactive where Base == SQLiteService {
         return Single.create { [weak base] callback in
             
             guard let storage = base else { return Disposables.create() }
-            storage.close(callback)
+            nonisolated(unsafe) let callback = callback
+            storage.close { callback($0) }
             
             return Disposables.create()
         }
     }
     
     
-    public func run<T>(execute: @escaping (DataBase) throws -> T) -> Single<T> {
+    public func run<T: Sendable>(execute: @Sendable @escaping (DataBase) throws -> T) -> Single<T> {
         
         return Single.create { [weak base] callback in
             
             guard let storage = base else { return Disposables.create() }
-            storage.run(execute: execute, completed: callback)
+            nonisolated(unsafe) let callback = callback
+            storage.run(execute: execute) { callback($0) }
             
             return Disposables.create()
         }
     }
     
     public func migration(upto version: Int32,
-                          steps: @escaping (Int32, DataBase) throws -> Void,
-                          finalized: ((Int32, DataBase) -> Void)? = nil) -> Single<Int32> {
+                          steps: @Sendable @escaping (Int32, DataBase) throws -> Void,
+                          finalized: (@Sendable (Int32, DataBase) -> Void)? = nil) -> Single<Int32> {
         
         return Single.create { [weak base] callback in
         
             guard let storage = base else { return Disposables.create() }
-            storage.migrate(upto: version, steps: steps, finalized: finalized, completed: callback)
+            nonisolated(unsafe) let callback = callback
+            storage.migrate(upto: version, steps: steps, finalized: finalized) { callback($0) }
         
             return Disposables.create()
         }

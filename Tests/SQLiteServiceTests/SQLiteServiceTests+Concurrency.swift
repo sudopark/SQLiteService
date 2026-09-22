@@ -11,7 +11,7 @@ import XCTest
 
 
 @available(iOS 13.0.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
-class SQLiteServiceTests_Concurrency: BaseSQLiteServiceTests { }
+class SQLiteServiceTests_Concurrency: BaseSQLiteServiceTests, @unchecked Sendable { }
 
 @available(iOS 13.0.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
 extension SQLiteServiceTests_Concurrency {
