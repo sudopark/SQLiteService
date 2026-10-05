@@ -1,225 +1,43 @@
 # SQLiteService
 
 It is a library for easier and type-safe use of sqlite in the apple device(ios/macos) environment.
+A table is declared once with the ```@Table``` macro, and queries are built from its columns.
+
+```swift
+import SQLiteServiceMacros
+
+@Table("Users")
+struct UserTable {
+
+    @Column(.primaryKey(autoIncrement: false)) var uid: String
+    @Column(.notNull) var name: String
+    var age: Int?
+}
+
+let service = SQLiteService()
+_ = service.open(path: dbPath)
+_ = service.run { try $0.insert(UserTable.self, entities: [.init(uid: "u1", name: "sudo", age: 30)]) }
+
+let query = UserTable.selectAll { $0.age > 20 }
+let users: Result<[UserTable.Entity], Error> = service.run { try $0.load(query) }
+```
 
 
 ## Installation
 Currently, only SPM is supported. The runtime deployment targets are unchanged.
+
+| Product | Use |
+|---|---|
+| ```SQLiteServiceMacros``` | ```@Table``` / ```@Column``` macros. Re-exports ```SQLiteService```, so this one import is enough. Requires Swift 6. |
+| ```SQLiteService``` | The core library without the macros. Use it when you do not want to build swift-syntax. |
+| ```RxSQLiteService``` | RxSwift extensions. |
 
 `SQLiteService` and `SQLiteServiceMacros` build in the Swift 6 language mode, so an entity crossing the access queue has to be `Sendable`: `RowValueType` inherits `Sendable` and the completion handler APIs take `@Sendable` closures. A hand written entity that is a non-final class or holds mutable state has to become a value type. `RxSQLiteService` stays in the Swift 5 language mode until RxSwift annotates its own API.
 
 `SQLiteService` and `RxSQLiteService` build on Swift 5 as well - a Swift 5 toolchain resolves the package through `Package@swift-5.swift`, which declares those two products only. The `@Table` macro needs a macro capable manifest, so `SQLiteServiceMacros` is available on Swift 6 and later.
 
 
-## How to use it
-
-The interface of SQLiteService simply consists of open/close + run + migration. The operation that returns the Result type is synchronous, and when the Result is passed to the completion handler, it operates asynchronously. (Synchronous operations of asynchronous operation + run action are executed after the migration operation is finished internally in SQLiteService.)
-
-The run method should be called with a closure of this type: ```(DataBase) throws -> T``` indicating what action to take and what the result type is. ```(DataBase)``` follows the ```Connection & DataBase``` protocol. Please refer to the protocol for which functions are supported. (Instead of using SQLiteService, you can directly handle ```SQLiteDataBase``` objects that conforms the ```Connection & DataBase``` protocol.)
-
-
-### open and close database
-
-```swift
-private func openDatabaseAndCloseExample() {
-    
-    let openResult: Result<Void, Error> = self.service.open(path: self.dbPath)
-    print("db open result: \(openResult)")
-    
-    let closeResult: Result<Void, Error> = self.service.close()
-    print("db close result: \(closeResult)")
-    
-  
-    self.service.open(path: self.dbPath) { result in
-        print("db open result: \(result)")
-    }
-    
-    self.service.close { result in
-        print("db close result: \(result)")
-    }
-}
-
-```
-
-
-### Table
-```Table``` must be defined with ```ColumnType``` and ```EntityType```.
-Use ```ColumnType``` to specify the column name and stored data type.
-```EntityType``` must conform to ```RowValueType```, which means that the query result can be returned as a data model.
-```swift
-
-// MARK: - TableColumn
-
-public protocol TableColumn: RawRepresentable, CaseIterable where RawValue == String {
-    
-    var dataType: ColumnDataType { get }
-}
-
-// MARK: - RowValuetype
-
-public protocol RowValueType: Sendable {
-    
-    init(_ cursor: CursorIterator) throws
-}
-
-public protocol Table {
-    
-    associatedtype EntityType: RowValueType
-    associatedtype ColumnType: TableColumn
-    ...
-}
-```
-
-Below are examples of ```UserTable``` and ```PetTable``` that store user and pet information.
-
-```swift
-
-struct UserTable: Table {
-    
-    // Define table column
-    enum Columns: String, TableColumn {
-        case uid
-        case name
-        case age
-        case email
-        case phone
-        case introduction = "intro"
-    
-        // define each column data type
-        var dataType: ColumnDataType {
-            switch self {
-            case .uid: return .text([.primaryKey(autoIncrement: false)])
-            case .name: return .text([.notNull])
-            case .age: return .integer([])
-            case .email: return .text([.unique, .notNull])
-            case .phone: return .text([])
-            case .introduction: return .text([])
-            }
-        }
-    }
-    
-    // Define Entity that conforms to RowValueType protocol.
-    struct Entiity: RowValueType {
-        let uid: String
-        let name: String
-        let age: Int?
-        let email: String
-        let phone: String?
-        let introduction: String?
-        
-        init(_ cursor: CursorIterator) throws {
-            self.uid = try cursor.next().unwrap()
-            self.name = try cursor.next().unwrap()
-            self.age = cursor.next()
-            self.email = try cursor.next().unwrap()
-            self.phone = cursor.next()
-            self.introduction = cursor.next()
-        }
-    }
-    
-    typealias EntityType = Entiity
-    typealias ColumnType = Columns
-    
-    static var tableName: String { "Users" }
-    
-    // mapping each column with Entity property
-    static func scalar(_ entity: Entiity, for column: Columns) -> ScalarType? {
-        switch column {
-        case .uid: return entity.uid
-        case .name: return entity.name
-        case .age: return entity.age
-        case .email: return entity.email
-        case .phone: return entity.phone
-        case .introduction: return entity.introduction
-        }
-    }
-}
-
-struct User { 
-    let uid: String
-    let name: String
-    var age: Int?
-    let email: String
-    var phone: String?
-    var introduction: String?
-    
-    init(dummy index: Int) {
-        self.uid = "uid:\(index)"
-        self.name = "name:\(index)"
-        self.age = index % 2 == 0 ? nil: index
-        self.email = "email:\(index)"
-        self.introduction = ["hello", "world", "!"].randomElement()
-    }
-}
-
-extension UserTable.Entiity {
-    
-    init(_ user: User) {
-        self.uid = user.uid
-        self.name = user.name
-        self.age = user.age
-        self.email = user.email
-        self.phone = user.phone
-        self.introduction = user.introduction
-    }
-}
-
-// define pet table
-struct PetTable: Table {
-    
-    enum Columns: String, TableColumn {
-        case uid
-        case ownerID = "owner_id"
-        case name
-        
-        var dataType: ColumnDataType {
-            switch self {
-            case .uid: return .text([.primaryKey(autoIncrement: false), .notNull])
-            case .ownerID: return .text([.notNull])
-            case .name: return .text([.notNull])
-            }
-        }
-    }
-    
-    struct Entity: RowValueType {
-        let uid: String
-        let ownerID: String
-        let name: String
-        
-        init(_ cursor: CursorIterator) throws {
-            self.uid = try cursor.next().unwrap()
-            self.ownerID = try cursor.next().unwrap()
-            self.name = try cursor.next().unwrap()
-        }
-        
-        init(uid: String, ownerID: String, name: String) {
-            self.uid = uid
-            self.ownerID = ownerID
-            self.name = name
-        }
-    }
-    
-    static var tableName: String { "pets" }
-    typealias ColumnType = Columns
-    typealias EntityType = Entity
-    
-    static func scalar(_ entity: Entity, for column: Columns) -> ScalarType? {
-        switch column {
-        case .uid: return entity.uid
-        case .ownerID: return entity.ownerID
-        case .name: return entity.name
-        }
-    }
-}
-
-```
-
-Another requirement for tables is to indicate which property of the entity matches each column using the ```static func scalar(_ entity: Entity, for column: Columns) -> ScalarType?``` type method.
-(Actual data is stored by matching entity property values according to the order of columns following the ```CaseIterable``` protocol.)
-
-### Table with @Table macro
-
-The same table can be declared once with the ```@Table``` macro. It ships as a separate ```SQLiteServiceMacros``` product, so consumers who do not use it never build swift-syntax, and it requires Swift 6.
+## Define a table with @Table
 
 ```swift
 import SQLiteServiceMacros
@@ -234,133 +52,185 @@ struct UserTable {
     var phone: String?
     @Column(name: "intro") var introduction: String?
 }
+
+@Table("pets")
+struct PetTable {
+
+    @Column(.primaryKey(autoIncrement: false), .notNull) var uid: String
+    @Column(.notNull, name: "owner_id") var ownerID: String
+    @Column(.notNull) var name: String
+}
 ```
 
-It generates the ```Table``` conformance, a ```Columns``` enum and an ```Entity``` struct from the declaration order, so the column order and the cursor read order can no longer drift apart.
+The macro generates the ```Table``` conformance, a ```Columns``` enum and an ```Entity``` struct from the declaration order, so the column order and the cursor read order can not drift apart.
 
-- The SQLite data type comes from the Swift type: ```Int``` and ```Bool``` to ```.integer```, ```String``` to ```.text```, ```Double``` and ```Float``` to ```.real```.
-- Column attributes come only from ```@Column```. An optional property is not ```NOT NULL``` by itself.
+- Every stored instance property becomes a column, with or without ```@Column```. ```static``` / ```class``` properties are not columns.
+- The SQLite data type comes from the Swift type: ```Int``` and ```Bool``` to ```.integer```, ```String``` to ```.text```, ```Double``` and ```Float``` to ```.real```. A property without a type annotation or of any other type is a compile error.
+- Column attributes come only from ```@Column```. A property without it has no attributes - a non optional property is not ```NOT NULL``` by itself either.
 - ```@Column(name:)``` sets the stored column name, otherwise the property name is used.
 - A table declares stored properties only. A computed property or a ```willSet``` / ```didSet``` observer is a compile error, so the entity is always inferable from the declared types alone.
-- ```Entity``` gets a memberwise init and the ```RowValueType``` cursor init. Its mutability follows the column type, not the table declaration, so writing ```let``` or ```var``` on a table property makes no difference: an optional column becomes a mutable ```var``` whose init argument defaults to ```nil``` and can be filled in after the entity is built, every other column becomes a ```let```. Conversions live in ```extension UserTable.Entity```.
-- Migration statements are still written by hand in ```extension UserTable { static func migrateStatement(for:) }```.
+- ```Entity``` gets a memberwise init and the ```RowValueType``` cursor init. Its mutability follows the column type, not the table declaration, so writing ```let``` or ```var``` on a table property makes no difference: an optional column becomes a mutable ```var``` whose init argument defaults to ```nil``` and can be filled in after the entity is built, every other column becomes a ```let```.
 
-Tables that the macro does not fit - one entity shared by several tables, for example - stay as a hand written ```Table``` conformance.
+Conversions from your domain model live in an extension of the generated ```Entity```.
+
+```swift
+extension UserTable.Entity {
+
+    init(_ user: User) {
+        self.init(uid: user.uid, name: user.name, age: user.age,
+                  email: user.email, phone: user.phone, introduction: user.introduction)
+    }
+}
+```
+
+
+## How to use it
+
+The interface of SQLiteService simply consists of open/close + run + migration. The operation that returns the Result type is synchronous, and when the Result is passed to the completion handler, it operates asynchronously. (Synchronous operations of asynchronous operation + run action are executed after the migration operation is finished internally in SQLiteService.)
+
+The run method should be called with a closure of this type: ```(DataBase) throws -> T``` indicating what action to take and what the result type is. ```(DataBase)``` follows the ```Connection & DataBase``` protocol. Please refer to the protocol for which functions are supported. (Instead of using SQLiteService, you can directly handle ```SQLiteDataBase``` objects that conforms the ```Connection & DataBase``` protocol.)
+
+
+### open and close database
+
+```swift
+let openResult: Result<Void, Error> = service.open(path: dbPath)
+let closeResult: Result<Void, Error> = service.close()
+
+service.open(path: dbPath) { result in
+    print("db open result: \(result)")
+}
+service.close { result in
+    print("db close result: \(result)")
+}
+
+// async / await
+try await service.async.open(path: dbPath)
+try await service.async.close()
+```
+
 
 ### data manipulation
 
-Here are some basic data manipulation usages.
+```swift
+let table = UserTable.self
+let users = (0..<10).map { UserTable.Entity(User(dummy: $0)) }
+
+// save
+// The task executed by the run method is executed in order by the serial queue,
+// synchronously or asynchronously according to the request method.
+service.run(execute: { try $0.insert(table, entities: users) }) { result in
+    print("save users result: \(result)")
+}
+
+// load
+let olderThan5 = table.selectAll { $0.age > 5 && $0.introduction == "hello" }
+let loaded: Result<[UserTable.Entity], Error> = service.run { try $0.load(olderThan5) }
+
+let user1 = table.selectAll { $0.uid == "uid:1" }
+let loadedOne: Result<UserTable.Entity?, Error> = service.run { try $0.loadOne(user1) }
+
+// update
+let updateQuery = table.update { [$0.introduction == "newIntro"] }
+    .where { $0.uid == "uid:1" }
+_ = service.run { try $0.update(table, query: updateQuery) }
+
+// delete
+let deleteQuery = table.delete().where { $0.uid == "uid:1" }
+_ = service.run { try $0.delete(table, query: deleteQuery) }
+
+// join
+let joinQuery = UserTable.selectAll()
+    .innerJoin(with: PetTable.selectAll(), on: { ($0.uid, $1.ownerID) })
+let mapping: (CursorIterator) throws -> (UserTable.Entity, PetTable.Entity) = { cursor in
+    return (try UserTable.Entity(cursor), try PetTable.Entity(cursor))
+}
+let ownerAndPets = service.run { try $0.load(joinQuery, mapping: mapping) }
+```
+
+
+### migration
+
+Migration statements are written by hand in an extension of the table. ```migrate(upto:steps:)``` calls each step with the current ```user_version``` until it reaches the target version.
 
 ```swift
-func testSaveDataUsaga() {
-    
-    _ = self.service.open(path: self.dbPath)
-    
-    let users = (0..<10).map{ User(dummy: $0) }
-    let entities = users.map{ UserTable.Entiity($0) }
-    
-    /**
-     The  task executed by the run method can be sequentially executed synchronously/asynchronously according to the request method by the serial queue.
-     */
-     self.service.run(execute: { try $0.insert(UserTable.self, entities: entities) }) { result in
-         print("save users result: \(result)")
-     }
+@Table("Users")
+struct UserTable {
+    // ...
+    var isBlocked: Bool?
 }
 
-func testLoadDataUsage() {
-    
-    let users = (0..<10).map{ User(dummy: $0) }
-    let entities = users.map{ UserTable.Entiity($0) }
-    
-    let table = UserTable.self
-    
-    _ = self.service.open(path: self.dbPath)
-    _ = self.service.run(execute: { try $0.insert(table, entities: entities) })
-    
-    let query1 = table.selectAll{ $0.age > 5 }
-    let result1: Result<[UserTable.Entiity], Error> = self.service.run(execute: { try $0.load(query1) })
-    print("load users older than 5 result \(result1)")
-    
-    
-    let query2 = table.selectAll{ $0.age > 5 && $0.introduction == "hello" }
-    let result2: Result<[UserTable.Entiity], Error> = self.service.run(execute: { try $0.load(query2) })
-    print("load result: \(result2)")
-    
-    let query3 = table.selectAll{ $0.uid == "uid:1" }
-    let result3: Result<UserTable.Entiity?, Error> = self.service.run(execute: { try $0.loadOne(query3) })
-    print("load user 1 result: \(result3)")
-    
-    let query4 = table.selectAll()
-    let result4: Result<[UserTable.Entiity], Error> = self.service.run(execute: { try $0.load(query4) })
-    print("load all users result: \(result4)")
-}
+extension UserTable {
 
-func testUpdateUsage() {
-    
-    let table = UserTable.self
-    
-    var oldUser = User(dummy: 1)
-    oldUser.introduction = "old_introduction"
-    _ = self.service.open(path: self.dbPath)
-    _ = self.service.run(execute: { try $0.insert(table, entities: [.init(oldUser)]) })
-    
-    let updateQuery = table.update { [$0.introduction == "newIntro"]}
-        .where{ $0.uid == "uid:1" }
-    _ = self.service.run(execute: { try $0.update(table, query: updateQuery) })
-    
-    let selectQuery = table.selectAll{ $0.uid == "uid:1" }
-    self.service.run(execute: { try $0.loadOne(selectQuery) }) { (result: Result<UserTable.Entiity?, Error>) in
-        guard case let .success(user) = result, let updatedUser = user else { return }
-        print("updated user intro: \(updatedUser.introduction)")
+    static func migrateStatement(for version: Int32) -> String? {
+        switch version {
+        case 0: return self.addColumnStatement(.isBlocked)
+        default: return nil
+        }
     }
 }
 
-func testDeleteUsage() {
-    let table = UserTable.self
-    
-    let users = (0..<10).map{ User(dummy: $0) }
-    let entities = users.map{ UserTable.Entiity($0) }
-    
-    _ = self.service.open(path: self.dbPath)
-    _ = self.service.run(execute: { try $0.insert(table, entities: entities) })
-    
-    let deleteQuery = table.delete().where{ $0.uid == "uid:1" }
-    self.service.run(execute: { try $0.delete(table, query: deleteQuery) }) { result in
-        print("delete result: \(result)")
-    }
-    
-    self.wait(for: [expect], timeout: 0.01)
+service.migrate(upto: 1, steps: { version, database in
+    try database.migrate(UserTable.self, version: version)
+}) { result in
+    print("migrated version: \(result)")
 }
-
-func testJoinQueryUsage() {
-
-    let users = (0..<10).map{ User(dummy: $0) }.map{ UserTable.Entiity($0) }
-    let pets: [PetTable.Entity] = [
-        .init(uid: "p0", ownerID: "uid:1", name: "foo"),
-        .init(uid: "p1", ownerID: "uid:3", name: "bar")
-    ]
-    
-    _ = self.service.open(path: self.dbPath)
-    _ = self.service.run(execute: { try $0.insert(UserTable.self, entities: users) })
-    _ = self.service.run(execute: { try $0.insert(PetTable.self, entities: pets) })
-    
-    let allUserQuery = UserTable.selectAll()
-    let allpetsQuery = PetTable.selectAll()
-    let joinQuery = allUserQuery.innerJoin(with: allpetsQuery, on: { ($0.uid, $1.ownerID) })
-    
-    typealias UserAndPetPair = (UserTable.Entiity, PetTable.Entity)
-    let mapping: (CursorIterator) throws -> UserAndPetPair? = { cursor in
-        return (try UserTable.Entiity(cursor), try PetTable.Entity(cursor))
-    }
-    let result = self.service.run(execute: { try $0.load(joinQuery, mapping: mapping) })
-    let petOwnerAndPets = try? result.get()
-    print("pet owner and pet: \(petOwnerAndPets)")
-}
-
 ```
+
+
+## Hand written Table conformance
+
+Tables that the macro does not fit - one entity shared by several tables, for example - stay as a hand written ```Table``` conformance. It needs a ```ColumnType``` that lists the columns in order, an ```EntityType``` that reads a row from the cursor in the same order, and ```scalar(_:for:)``` that maps each column to an entity property.
+
+```swift
+import SQLiteService
+
+struct UserTable: Table {
+
+    enum Columns: String, TableColumn {
+        case uid
+        case name
+        case age
+
+        var dataType: ColumnDataType {
+            switch self {
+            case .uid: return .text([.primaryKey(autoIncrement: false)])
+            case .name: return .text([.notNull])
+            case .age: return .integer([])
+            }
+        }
+    }
+
+    struct Entity: RowValueType {
+        let uid: String
+        let name: String
+        let age: Int?
+
+        init(_ cursor: CursorIterator) throws {
+            self.uid = try cursor.next().unwrap()
+            self.name = try cursor.next().unwrap()
+            self.age = cursor.next()
+        }
+    }
+
+    typealias EntityType = Entity
+    typealias ColumnType = Columns
+
+    static var tableName: String { "Users" }
+
+    static func scalar(_ entity: Entity, for column: Columns) -> ScalarType? {
+        switch column {
+        case .uid: return entity.uid
+        case .name: return entity.name
+        case .age: return entity.age
+        }
+    }
+}
+```
+
+Data is stored by matching entity property values in the order of the columns from ```CaseIterable```, so the cursor reads in ```Entity.init(_:)``` must follow the same order.
 
 For more information on how to use it, see unit tests.
 
 
 **As you can see from the readme, this project has a lot of missing features and a lot of room for improvement. Feedback or contributions to the project are always welcome. 🙏**
-
