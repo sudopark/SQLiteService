@@ -187,7 +187,10 @@ extension SQLiteDataBase {
         guard let connection = self.dbPointer else {
             throw SQLiteErrors.close
         }
-        sqlite3_close(connection)
+        guard sqlite3_close(connection) == SQLITE_OK else {
+            throw SQLiteErrors.close
+        }
+        self.dbPointer = nil
     }
 }
 
@@ -264,6 +267,10 @@ extension SQLiteDataBase {
     public func dropTable<T>(_ table: T.Type) throws where T : Table {
 
         let dropStatement = try prepare(statement: table.dropStatement)
+        
+        defer {
+            sqlite3_finalize(dropStatement)
+        }
         
         guard sqlite3_step(dropStatement) == SQLITE_DONE else {
             throw SQLiteErrors.step(errorMessage())

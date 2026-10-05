@@ -118,6 +118,15 @@ extension SQLiteDatabaseTests {
         XCTAssertNotNil(closeError)
     }
     
+    func testDatabase_whenCloseTwice_secondCloseFails() throws {
+        // given
+        try self.database.open(path: self.dbPath, isReadOnly: false)
+        try self.database.close()
+        
+        // when + then
+        XCTAssertThrowsError(try self.database.close())
+    }
+    
     func testDatabase_updateJournalMode() throws {
         // given
         self.openDataBase()
@@ -168,6 +177,16 @@ extension SQLiteDatabaseTests {
         
         // then
         XCTAssertEqual(isDroped, true)
+    }
+
+    func testDatabase_afterDropTable_canClose() throws {
+        // given
+        self.openDataBase()
+        try self.database.createTableOrNot(self.table)
+        try self.database.dropTable(self.table)
+        
+        // when + then
+        XCTAssertNoThrow(try self.database.close())
     }
 }
 
